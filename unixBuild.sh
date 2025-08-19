@@ -3,5 +3,5 @@ mkdir -p build
 cd build
 mkdir -p shaders
 cmake -S ../ -B .
-make && make Shaders && ./main
+make && make Shaders && ./tetcipp
 cd ..

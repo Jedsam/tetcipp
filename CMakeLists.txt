@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(vulkanproject CXX)
+project(tetcipp CXX)
 set(CMAKE_CXX_STANDARD 23)
 
 # necessary for clangd to understand the file structure
@@ -9,10 +9,10 @@ find_package(Vulkan REQUIRED)
 find_package(assimp REQUIRED)
 find_package(glfw3 REQUIRED)
 
-set(EXECUTABLES main)
+set(EXECUTABLES ${PROJECT_NAME})
 # Get the cpp files needed
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
-set(sources_main ${SOURCES})
+set(sources_${PROJECT_NAME} ${SOURCES})
 # Add hpp files folder
 
 foreach(executable ${EXECUTABLES})
