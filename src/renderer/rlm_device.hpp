@@ -24,6 +24,12 @@ class RLMDevice {
   /// @throws std::runtime_error if instance creation fails.
   void createInstance();
 
+  ///
+  void setupDebugMessenger();
+
+  ///
+  void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
+
   /// Verifies that GLFW supports all required Vulkan extensions.
   /// @param requiredExtensions List of required Vulkan extension names.
   /// @throws std::runtime_error if one or more required extensions are missing.
@@ -38,7 +44,9 @@ class RLMDevice {
   bool checkValidationLayerSupport();
 
   RLMWindow &window;
+
   VkInstance instance;
+  VkDebugUtilsMessengerEXT debugMessenger;
 
   const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
 };

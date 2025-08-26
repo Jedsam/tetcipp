@@ -12,13 +12,62 @@
 
 namespace rlm {
 
-RLMDevice::RLMDevice(RLMWindow &window) : window{window} { createInstance(); }
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+    void *pUserData) {
 
-RLMDevice::~RLMDevice() { vkDestroyInstance(instance, nullptr); }
+  std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+
+  //   if (messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+  //     // Message is important enough to show
+  // }
+
+  return VK_FALSE;
+}
+
+VkResult CreateDebugUtilsMessengerEXT(
+    VkInstance instance,
+    const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
+    const VkAllocationCallbacks *pAllocator,
+    VkDebugUtilsMessengerEXT *pDebugMessenger) {
+  auto func =
+      (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+  if (func != nullptr) {
+    return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+  } else {
+    return VK_ERROR_EXTENSION_NOT_PRESENT;
+  }
+}
+
+void DestroyDebugUtilsMessengerEXT(
+    VkInstance instance,
+    VkDebugUtilsMessengerEXT debugMessenger,
+    const VkAllocationCallbacks *pAllocator) {
+  auto func =
+      (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+  if (func != nullptr) {
+    func(instance, debugMessenger, pAllocator);
+  }
+}
+
+RLMDevice::RLMDevice(RLMWindow &window) : window{window} {
+  createInstance();
+  setupDebugMessenger();
+}
+
+RLMDevice::~RLMDevice() {
+  if (enableValidationLayers) {
+    DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
+  }
+
+  vkDestroyInstance(instance, nullptr);
+}
 
 void RLMDevice::createInstance() {
   if (enableValidationLayers && !checkValidationLayerSupport()) {
-    throw std::runtime_error("validation layers requested, but not available!");
+    throw std::runtime_error("Validation layers requested, but not available!");
   } else {
     std::cout << std::format("The instance is in debug mode\n");
   }
@@ -41,15 +90,48 @@ void RLMDevice::createInstance() {
   createInfo.enabledExtensionCount = glfwExtensions.size();
   createInfo.ppEnabledExtensionNames = glfwExtensions.data();
 
-  createInfo.enabledLayerCount = 0;
+  VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+  if (enableValidationLayers) {
+    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+    createInfo.ppEnabledLayerNames = validationLayers.data();
+
+    populateDebugMessengerCreateInfo(debugCreateInfo);
+    createInfo.pNext = reinterpret_cast<VkDebugUtilsMessengerCreateInfoEXT *>(&debugCreateInfo);
+  } else {
+    createInfo.enabledLayerCount = 0;
+  }
 
   auto result = vkCreateInstance(&createInfo, nullptr, &instance);
 
   if (result != VK_SUCCESS) {
-    throw std::runtime_error("failed to create instance!");
+    throw std::runtime_error("Failed to create instance!");
   }
 
   checkGLFWHasRequiredExtensions(glfwExtensions);
+}
+
+void RLMDevice::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo) {
+  createInfo = {};
+  createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+  createInfo.messageSeverity =
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+  createInfo.pfnUserCallback = debugCallback;
+}
+
+void RLMDevice::setupDebugMessenger() {
+  if (!enableValidationLayers)
+    return;
+
+  VkDebugUtilsMessengerCreateInfoEXT createInfo{};
+  populateDebugMessengerCreateInfo(createInfo);
+
+  auto result = CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("Failed to set up debug messenger");
+  }
 }
 
 void RLMDevice::checkGLFWHasRequiredExtensions(const std::vector<const char *> &requiredExtensions) {
