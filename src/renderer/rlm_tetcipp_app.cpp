@@ -7,7 +7,7 @@
 
 #include "rlm_tetcipp_app.hpp"
 
-namespace renderer {
+namespace rlm {
 RLMApplication::RLMApplication() {}
 
 RLMApplication::~RLMApplication() {}
@@ -20,16 +20,18 @@ void RLMApplication::run() {
 
 void RLMApplication::init() {
   // initialize window
-  rlmWindow = std::make_unique<RLMWindow>(HEIGHT, WIDTH, "RLMWindow");
-  assert(rlmWindow != nullptr && "RLMWindow creation was unsuccessful");
+  window = std::make_unique<RLMWindow>(HEIGHT, WIDTH, "RLMWindow");
+  assert(window != nullptr && "RLMWindow creation was unsuccessful");
+  device = std::make_unique<RLMDevice>(*window);
+  assert(device != nullptr && "RLMDevice creation was unsuccessful");
 }
 
 void RLMApplication::mainLoop() {
-  while (!rlmWindow->shouldClose()) {
+  while (!window->shouldClose()) {
     glfwPollEvents();
   }
 }
 
 void RLMApplication::cleanup() {}
 
-}  // namespace renderer
+}  // namespace rlm

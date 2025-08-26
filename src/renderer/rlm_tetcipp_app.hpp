@@ -1,11 +1,12 @@
 #pragma once
 
+#include "rlm_device.hpp"
 #include "rlm_window.hpp"
 
 #include <cstdint>
 #include <memory>
 
-namespace renderer {
+namespace rlm {
 
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
@@ -19,7 +20,8 @@ class RLMApplication {
   ~RLMApplication();
 
  private:
-  std::unique_ptr<RLMWindow> rlmWindow;
+  std::unique_ptr<RLMWindow> window;
+  std::unique_ptr<RLMDevice> device;
   void init();
 
   void mainLoop();
@@ -27,4 +29,4 @@ class RLMApplication {
   void cleanup();
 };
 
-}  // namespace renderer
+}  // namespace rlm

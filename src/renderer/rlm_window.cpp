@@ -5,7 +5,7 @@
 
 #include "rlm_window.hpp"
 
-namespace renderer {
+namespace rlm {
 RLMWindow::RLMWindow(int height, int width, const std::string &name)
     : height{height}, width{width}, windowName{name} {
   initWindow();
@@ -24,4 +24,4 @@ void RLMWindow::initWindow() {
 
   window = glfwCreateWindow(height, width, windowName.c_str(), nullptr, nullptr);
 }
-}  // namespace renderer
+}  // namespace rlm

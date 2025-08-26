@@ -6,7 +6,7 @@
 
 #include <string>
 
-namespace renderer {
+namespace rlm {
 class RLMWindow {
  public:
   RLMWindow(int height, int width, const std::string &name);
@@ -22,4 +22,4 @@ class RLMWindow {
 
   GLFWwindow *window;
 };
-}  // namespace renderer
+}  // namespace rlm

@@ -6,7 +6,7 @@
 #include "renderer/rlm_tetcipp_app.hpp"
 
 int main() {
-  renderer::RLMApplication app;
+  rlm::RLMApplication app;
 
   try {
     app.run();
