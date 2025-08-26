@@ -8,8 +8,8 @@
 
 namespace rlm {
 
-const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 600;
+const uint32_t WIDTH = 1200;
+const uint32_t HEIGHT = 900;
 
 // Stands for Renderer Little Machine RLM
 class RLMApplication {

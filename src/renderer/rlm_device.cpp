@@ -1,4 +1,6 @@
 
+#include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -15,6 +17,12 @@ RLMDevice::RLMDevice(RLMWindow &window) : window{window} { createInstance(); }
 RLMDevice::~RLMDevice() { vkDestroyInstance(instance, nullptr); }
 
 void RLMDevice::createInstance() {
+  if (enableValidationLayers && !checkValidationLayerSupport()) {
+    throw std::runtime_error("validation layers requested, but not available!");
+  } else {
+    std::cout << std::format("The instance is in debug mode\n");
+  }
+
   VkApplicationInfo appInfo{};
   appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
   // appInfo.pNext = nullptr;
@@ -76,6 +84,27 @@ std::vector<const char *> RLMDevice::getRequiredExtensions() {
   }
 
   return extensions;
+}
+
+bool RLMDevice::checkValidationLayerSupport() {
+  uint32_t layerCount;
+  vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+  std::vector<VkLayerProperties> availableLayers(layerCount);
+  vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+  for (const char *layerName : validationLayers) {
+    bool layerFound = std::any_of(
+        availableLayers.begin(), availableLayers.end(), [&layerName](const auto &layerProperties) {
+          return strcmp(layerName, layerProperties.layerName) == 0;
+        });
+
+    if (!layerFound) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace rlm
