@@ -11,8 +11,9 @@ namespace rlm {
 
 struct QueueFamilyIndices {
   std::optional<uint32_t> graphicsFamily;
+  std::optional<uint32_t> presentFamily;
 
-  bool isComplete() { return graphicsFamily.has_value(); }
+  bool isComplete() { return graphicsFamily.has_value() && presentFamily.has_value(); }
 };
 
 class RLMDevice {
@@ -79,6 +80,7 @@ class RLMDevice {
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
   VkQueue graphicsQueue;
+  VkQueue presentQueue;
 
   const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
 };
