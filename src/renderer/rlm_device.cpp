@@ -2,9 +2,12 @@
 #include <algorithm>
 #include <cstring>
 #include <iostream>
+#include <iterator>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "renderer/rlm_window.hpp"
@@ -55,6 +58,7 @@ void DestroyDebugUtilsMessengerEXT(
 RLMDevice::RLMDevice(RLMWindow &window) : window{window} {
   createInstance();
   setupDebugMessenger();
+  pickPhysicalDevice();
 }
 
 RLMDevice::~RLMDevice() {
@@ -68,8 +72,6 @@ RLMDevice::~RLMDevice() {
 void RLMDevice::createInstance() {
   if (enableValidationLayers && !checkValidationLayerSupport()) {
     throw std::runtime_error("Validation layers requested, but not available!");
-  } else {
-    std::cout << std::format("The instance is in debug mode\n");
   }
 
   VkApplicationInfo appInfo{};
@@ -92,6 +94,8 @@ void RLMDevice::createInstance() {
 
   VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
   if (enableValidationLayers) {
+    std::cout << std::format("The instance is in debug mode\n");
+
     createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
     createInfo.ppEnabledLayerNames = validationLayers.data();
 
@@ -110,17 +114,6 @@ void RLMDevice::createInstance() {
   checkGLFWHasRequiredExtensions(glfwExtensions);
 }
 
-void RLMDevice::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo) {
-  createInfo = {};
-  createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-  createInfo.messageSeverity =
-      VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-  createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                           VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                           VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-  createInfo.pfnUserCallback = debugCallback;
-}
-
 void RLMDevice::setupDebugMessenger() {
   if (!enableValidationLayers)
     return;
@@ -132,6 +125,96 @@ void RLMDevice::setupDebugMessenger() {
   if (result != VK_SUCCESS) {
     throw std::runtime_error("Failed to set up debug messenger");
   }
+}
+
+void RLMDevice::pickPhysicalDevice() {
+  uint32_t deviceCount = 0;
+  vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+  if (deviceCount == 0) {
+    throw std::runtime_error("failed to find GPUs with Vulkan support!");
+  }
+
+  std::vector<VkPhysicalDevice> devices(deviceCount);
+  vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+  // Use an ordered map to automatically sort candidates by increasing score
+  std::multimap<int, VkPhysicalDevice> candidates;
+
+  for (const auto &device : devices) {
+    int score = rateDeviceSuitability(device);
+    candidates.insert(std::make_pair(score, device));
+  }
+
+  // Check if the best candidate is suitable at all
+  if (candidates.rbegin()->first > 0) {
+    physicalDevice = candidates.rbegin()->second;
+  } else {
+    throw std::runtime_error("failed to find a suitable GPU!");
+  }
+
+  if (physicalDevice == VK_NULL_HANDLE) {
+    throw std::runtime_error("failed to find a suitable GPU!");
+  }
+}
+
+QueueFamilyIndices RLMDevice::findQueueFamilies(VkPhysicalDevice device) {
+  QueueFamilyIndices indices;
+  uint32_t queueFamilyCount = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+  auto it = std::find_if(queueFamilies.begin(), queueFamilies.end(), [](const auto &queueFamily) {
+    return queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT;
+  });
+
+  if (it != queueFamilies.end()) {
+    indices.graphicsFamily = static_cast<uint32_t>(std::distance(queueFamilies.begin(), it));
+  }
+
+  return indices;
+}
+
+int RLMDevice::rateDeviceSuitability(VkPhysicalDevice device) {
+  VkPhysicalDeviceProperties deviceProperties;
+  VkPhysicalDeviceFeatures deviceFeatures;
+  vkGetPhysicalDeviceProperties(device, &deviceProperties);
+  vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+  int score = 0;
+
+  // Discrete GPUs have a significant performance advantage
+  if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+    score += 1000;
+  }
+
+  // Maximum possible size of textures affects graphics quality
+  score += deviceProperties.limits.maxImageDimension2D;
+
+  // Application can't function without geometry shaders
+  if (!deviceFeatures.geometryShader) {
+    return 0;
+  }
+
+  QueueFamilyIndices indices = findQueueFamilies(device);
+  if (!indices.isComplete()) {
+    return 0;
+  }
+
+  return score;
+}
+
+void RLMDevice::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo) {
+  createInfo = {};
+  createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+  createInfo.messageSeverity =
+      VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                           VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+  createInfo.pfnUserCallback = debugCallback;
 }
 
 void RLMDevice::checkGLFWHasRequiredExtensions(const std::vector<const char *> &requiredExtensions) {
