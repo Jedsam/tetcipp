@@ -33,11 +33,18 @@ class RLMDevice {
   void createInstance();
 
   /// Setups the way debug messages are handled and creates the required struct
-  /// @throws std::runtime_error if instance creation fails.
+  /// @throws std::runtime_error if debug messenger creation fails.
   void setupDebugMessenger();
 
-  /// @throws std::runtime_error if instance creation fails.
+  void createSurface();
+
+  /// Function to choose the most optimal physical device to work with
+  /// @throws std::runtime_error if no physical device found.
   void pickPhysicalDevice();
+
+  /// Function to create a logical device based on physical device which also holds queue information
+  /// @throws std::runtime_error if instance creation fails.
+  void createLogicalDevice();
 
   /// Template VkDebugUtilsMessengerCreateInfoEXT struct to be reused
   void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
@@ -55,14 +62,23 @@ class RLMDevice {
   /// @return true for no problem
   bool checkValidationLayerSupport();
 
-  int rateDeviceSuitability(VkPhysicalDevice device);
-  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+  /// Checks properties, features and queue families of a given device to return a suitabilty score
+  /// @return An int score based on the suitablity of the device, 0 for incompatible devices
+  int rateDeviceSuitability(VkPhysicalDevice physicalDevice);
+
+  /// Finds the queue family indices of a given physical device
+  /// @return A struct that holds the family indicies
+  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice);
 
   RLMWindow &window;
 
   VkInstance instance;
   VkDebugUtilsMessengerEXT debugMessenger;
+  VkSurfaceKHR surface;
+  VkDevice device;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+
+  VkQueue graphicsQueue;
 
   const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
 };

@@ -1,4 +1,7 @@
 
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
 #include <algorithm>
 #include <cstring>
 #include <iostream>
@@ -58,14 +61,20 @@ void DestroyDebugUtilsMessengerEXT(
 RLMDevice::RLMDevice(RLMWindow &window) : window{window} {
   createInstance();
   setupDebugMessenger();
+  createSurface();
   pickPhysicalDevice();
+  createLogicalDevice();
 }
 
 RLMDevice::~RLMDevice() {
+  // Destroy them in reverse order they were created
+  vkDestroyDevice(device, nullptr);
+
   if (enableValidationLayers) {
     DestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr);
   }
 
+  vkDestroySurfaceKHR(instance, surface, nullptr);
   vkDestroyInstance(instance, nullptr);
 }
 
@@ -127,6 +136,13 @@ void RLMDevice::setupDebugMessenger() {
   }
 }
 
+void RLMDevice::createSurface() {
+  auto result = glfwCreateWindowSurface(instance, window.getGLFWWindow(), nullptr, &surface);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("failed to create window surface!");
+  }
+}
+
 void RLMDevice::pickPhysicalDevice() {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -135,15 +151,15 @@ void RLMDevice::pickPhysicalDevice() {
     throw std::runtime_error("failed to find GPUs with Vulkan support!");
   }
 
-  std::vector<VkPhysicalDevice> devices(deviceCount);
-  vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+  std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
+  vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data());
 
   // Use an ordered map to automatically sort candidates by increasing score
   std::multimap<int, VkPhysicalDevice> candidates;
 
-  for (const auto &device : devices) {
-    int score = rateDeviceSuitability(device);
-    candidates.insert(std::make_pair(score, device));
+  for (const auto &myDevice : physicalDevices) {
+    int score = rateDeviceSuitability(myDevice);
+    candidates.insert(std::make_pair(score, myDevice));
   }
 
   // Check if the best candidate is suitable at all
@@ -158,13 +174,48 @@ void RLMDevice::pickPhysicalDevice() {
   }
 }
 
-QueueFamilyIndices RLMDevice::findQueueFamilies(VkPhysicalDevice device) {
+void RLMDevice::createLogicalDevice() {
+  QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+
+  VkDeviceQueueCreateInfo queueCreateInfo{};
+  queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+  queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+  queueCreateInfo.queueCount = 1;
+
+  float queuePriority = 1.0f;
+  queueCreateInfo.pQueuePriorities = &queuePriority;
+
+  VkPhysicalDeviceFeatures deviceFeatures{};
+
+  VkDeviceCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+  createInfo.pQueueCreateInfos = &queueCreateInfo;
+  createInfo.queueCreateInfoCount = 1;
+  createInfo.pEnabledFeatures = &deviceFeatures;
+  createInfo.enabledExtensionCount = 0;
+
+  if (enableValidationLayers) {
+    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+    createInfo.ppEnabledLayerNames = validationLayers.data();
+  } else {
+    createInfo.enabledLayerCount = 0;
+  }
+
+  auto result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("failed to create instance!");
+  }
+
+  vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+}
+
+QueueFamilyIndices RLMDevice::findQueueFamilies(VkPhysicalDevice physicalDevice) {
   QueueFamilyIndices indices;
   uint32_t queueFamilyCount = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
   std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
   auto it = std::find_if(queueFamilies.begin(), queueFamilies.end(), [](const auto &queueFamily) {
     return queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT;
@@ -177,11 +228,11 @@ QueueFamilyIndices RLMDevice::findQueueFamilies(VkPhysicalDevice device) {
   return indices;
 }
 
-int RLMDevice::rateDeviceSuitability(VkPhysicalDevice device) {
+int RLMDevice::rateDeviceSuitability(VkPhysicalDevice physicalDevice) {
   VkPhysicalDeviceProperties deviceProperties;
   VkPhysicalDeviceFeatures deviceFeatures;
-  vkGetPhysicalDeviceProperties(device, &deviceProperties);
-  vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+  vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+  vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
 
   int score = 0;
 
@@ -198,7 +249,7 @@ int RLMDevice::rateDeviceSuitability(VkPhysicalDevice device) {
     return 0;
   }
 
-  QueueFamilyIndices indices = findQueueFamilies(device);
+  QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
   if (!indices.isComplete()) {
     return 0;
   }
