@@ -11,7 +11,7 @@
 namespace rlm {
 
 RLMSwapChain::RLMSwapChain(RLMDevice &rlmDevice, VkExtent2D windowExtent)
-    : rlmDevice{rlmDevice}, windowExtent{windowExtent} {
+    : rlmDevice{rlmDevice}, swapChainExtent{windowExtent} {
   init();
 }
 
@@ -31,6 +31,8 @@ void RLMSwapChain::createSwapChain() {
   spdlog::debug("RLMSwapChain::createSwapChain: Chosen swap present mode");
   VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
   spdlog::debug("RLMSwapChain::createSwapChain: Chosen swap extent");
+
+  swapChainImageFormat = surfaceFormat.format;
 
   uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
   if (swapChainSupport.capabilities.maxImageCount > 0 &&
@@ -73,6 +75,10 @@ void RLMSwapChain::createSwapChain() {
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to create swap chain!");
   }
+
+  vkGetSwapchainImagesKHR(rlmDevice.getDevice(), swapChain, &imageCount, nullptr);
+  swapChainImages.resize(imageCount);
+  vkGetSwapchainImagesKHR(rlmDevice.getDevice(), swapChain, &imageCount, swapChainImages.data());
 }
 
 VkSurfaceFormatKHR
@@ -111,7 +117,7 @@ VkExtent2D RLMSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabi
         capabilities.currentExtent.height);
     return capabilities.currentExtent;
   } else {
-    VkExtent2D actualExtent = windowExtent;
+    VkExtent2D actualExtent = swapChainExtent;
     actualExtent.width =
         std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
     actualExtent.height = std::clamp(

@@ -21,7 +21,10 @@ class RLMSwapChain {
 
   RLMDevice &rlmDevice;
 
+  std::vector<VkImage> swapChainImages;
+
   VkSwapchainKHR swapChain;
-  VkExtent2D windowExtent;
+  VkFormat swapChainImageFormat;
+  VkExtent2D swapChainExtent;
 };
 }  // namespace rlm
