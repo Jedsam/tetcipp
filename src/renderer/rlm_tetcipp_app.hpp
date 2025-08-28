@@ -20,8 +20,8 @@ class RLMApplication {
   ~RLMApplication();
 
  private:
-  std::unique_ptr<RLMWindow> window;
-  std::unique_ptr<RLMDevice> device;
+  std::unique_ptr<RLMWindow> rlmWindow;
+  std::unique_ptr<RLMDevice> rlmDevice;
   void init();
 
   void mainLoop();

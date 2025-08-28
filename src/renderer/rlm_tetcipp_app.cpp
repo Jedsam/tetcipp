@@ -20,14 +20,19 @@ void RLMApplication::run() {
 
 void RLMApplication::init() {
   // initialize window
-  window = std::make_unique<RLMWindow>(HEIGHT, WIDTH, "RLMWindow");
-  assert(window != nullptr && "RLMWindow creation was unsuccessful");
-  device = std::make_unique<RLMDevice>(*window);
-  assert(device != nullptr && "RLMDevice creation was unsuccessful");
+  rlmWindow = std::make_unique<RLMWindow>(HEIGHT, WIDTH, "RLMWindow");
+  if (rlmWindow == nullptr) {
+    throw std::runtime_error("RLMWindow creation was unsuccessful");
+  }
+
+  rlmDevice = std::make_unique<RLMDevice>(*rlmWindow);
+  if (rlmDevice == nullptr) {
+    throw std::runtime_error("RLMDevice creation was unsuccessful");
+  }
 }
 
 void RLMApplication::mainLoop() {
-  while (!window->shouldClose()) {
+  while (!rlmWindow->shouldClose()) {
     glfwPollEvents();
   }
 }

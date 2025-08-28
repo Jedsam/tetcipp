@@ -8,6 +8,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Vulkan REQUIRED)
 find_package(assimp REQUIRED)
 find_package(glfw3 REQUIRED)
+find_package(spdlog REQUIRED)
 
 set(EXECUTABLES ${PROJECT_NAME})
 # Get the cpp files needed
@@ -18,7 +19,10 @@ set(sources_${PROJECT_NAME} ${SOURCES})
 foreach(executable ${EXECUTABLES})
   add_executable(${executable} ${sources_${executable}} ${HELPING_FUNCTIONS})
   target_include_directories(${executable} PUBLIC ${PROJECT_SOURCE_DIR}/src)
-  target_link_libraries(${executable} PRIVATE Vulkan::Vulkan glfw assimp)
+  target_link_libraries(
+    ${executable}
+    PRIVATE Vulkan::Vulkan glfw assimp spdlog::spdlog_header_only
+  )
 endforeach()
 
 find_program(

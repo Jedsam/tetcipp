@@ -12,9 +12,13 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+// logger
+#include "spdlog/spdlog.h"
 
 #include "renderer/rlm_window.hpp"
 #include "rlm_device.hpp"
@@ -61,12 +65,17 @@ void DestroyDebugUtilsMessengerEXT(
   }
 }
 
-RLMDevice::RLMDevice(RLMWindow &window) : window{window} {
+RLMDevice::RLMDevice(RLMWindow &window) : rlmWindow{window} {
   createInstance();
+  spdlog::info("RLMDevice: Instance created\n");
   setupDebugMessenger();
+  spdlog::info("RLMDevice: Debug messenger done\n");
   createSurface();
+  spdlog::info("RLMDevice: Surface created\n");
   pickPhysicalDevice();
+  spdlog::info("RLMDevice: physical devices picked\n");
   createLogicalDevice();
+  spdlog::info("RLMDevice: Logical device created\n");
 }
 
 RLMDevice::~RLMDevice() {
@@ -140,7 +149,7 @@ void RLMDevice::setupDebugMessenger() {
 }
 
 void RLMDevice::createSurface() {
-  auto result = glfwCreateWindowSurface(instance, window.getGLFWWindow(), nullptr, &surface);
+  auto result = glfwCreateWindowSurface(instance, rlmWindow.getGLFWWindow(), nullptr, &surface);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to create window surface!");
   }
@@ -160,10 +169,12 @@ void RLMDevice::pickPhysicalDevice() {
   // Use an ordered map to automatically sort candidates by increasing score
   std::multimap<int, VkPhysicalDevice> candidates;
 
+  spdlog::info("RLMDevice::pickPhysicalDevice: About to rate devices!");
   for (const auto &myDevice : physicalDevices) {
     int score = rateDeviceSuitability(myDevice);
     candidates.insert(std::make_pair(score, myDevice));
   }
+  spdlog::info("RLMDevice::pickPhysicalDevice: Rated all devices succesfully!");
 
   // Check if the best candidate is suitable at all
   if (candidates.rbegin()->first > 0) {
@@ -175,6 +186,9 @@ void RLMDevice::pickPhysicalDevice() {
   if (physicalDevice == VK_NULL_HANDLE) {
     throw std::runtime_error("failed to find a suitable GPU!");
   }
+
+  vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+  std::cout << "physical device: " << properties.deviceName << std::endl;
 }
 
 void RLMDevice::createLogicalDevice() {
@@ -200,7 +214,8 @@ void RLMDevice::createLogicalDevice() {
   createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
   createInfo.pQueueCreateInfos = queueCreateInfos.data();
   createInfo.pEnabledFeatures = &deviceFeatures;
-  createInfo.enabledExtensionCount = 0;
+  createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+  createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
   if (enableValidationLayers) {
     createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
@@ -217,13 +232,16 @@ void RLMDevice::createLogicalDevice() {
   vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
 }
 
-QueueFamilyIndices RLMDevice::findQueueFamilies(VkPhysicalDevice physicalDevice) {
+QueueFamilyIndices RLMDevice::findQueueFamilies(VkPhysicalDevice myPhysicalDevice) {
+  spdlog::info("RLMDevice::findQueueFamilies: Inside the function");
   QueueFamilyIndices indices;
   uint32_t queueFamilyCount = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+  vkGetPhysicalDeviceQueueFamilyProperties(myPhysicalDevice, &queueFamilyCount, nullptr);
+  spdlog::info("RLMDevice::findQueueFamilies: Got the family count");
 
   std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+  vkGetPhysicalDeviceQueueFamilyProperties(myPhysicalDevice, &queueFamilyCount, queueFamilies.data());
+  spdlog::info("RLMDevice::findQueueFamilies: Got the queue family data");
 
   uint32_t i = 0;
   for (auto queueFamily : queueFamilies) {
@@ -231,21 +249,23 @@ QueueFamilyIndices RLMDevice::findQueueFamilies(VkPhysicalDevice physicalDevice)
       indices.graphicsFamily = i;
     }
     VkBool32 presentSupport = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
+    vkGetPhysicalDeviceSurfaceSupportKHR(myPhysicalDevice, i, surface, &presentSupport);
     if (presentSupport) {
       indices.presentFamily = i;
     }
+    if (indices.isComplete())
+      break;
     i++;
   }
 
   return indices;
 }
 
-int RLMDevice::rateDeviceSuitability(VkPhysicalDevice physicalDevice) {
+int RLMDevice::rateDeviceSuitability(VkPhysicalDevice myPhysicalDevice) {
   VkPhysicalDeviceProperties deviceProperties;
   VkPhysicalDeviceFeatures deviceFeatures;
-  vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
-  vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
+  vkGetPhysicalDeviceProperties(myPhysicalDevice, &deviceProperties);
+  vkGetPhysicalDeviceFeatures(myPhysicalDevice, &deviceFeatures);
 
   int score = 0;
 
@@ -258,16 +278,70 @@ int RLMDevice::rateDeviceSuitability(VkPhysicalDevice physicalDevice) {
   score += deviceProperties.limits.maxImageDimension2D;
 
   // Application can't function without geometry shaders
-  if (!deviceFeatures.geometryShader) {
-    return 0;
-  }
-
-  QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
-  if (!indices.isComplete()) {
+  if (!(deviceFeatures.geometryShader && isDeviceSuitable(myPhysicalDevice))) {
     return 0;
   }
 
   return score;
+}
+
+bool RLMDevice::isDeviceSuitable(VkPhysicalDevice myPhysicalDevice) {
+  spdlog::info("RLMDevice::isDeviceSuitable: step 1");
+  QueueFamilyIndices indices = findQueueFamilies(myPhysicalDevice);
+  if (!indices.isComplete())
+    return false;
+  spdlog::info("RLMDevice::isDeviceSuitable: step 2");
+
+  if (!checkDeviceExtensionSupport(myPhysicalDevice))
+    return false;
+
+  spdlog::info("RLMDevice::isDeviceSuitable: step 3");
+  SwapChainSupportDetails swapChainSupport = querySwapChainSupport(myPhysicalDevice);
+  if (swapChainSupport.formats.empty() || swapChainSupport.presentModes.empty())
+    return false;
+
+  spdlog::info("RLMDevice::isDeviceSuitable: step 4");
+  return true;
+}
+
+bool RLMDevice::checkDeviceExtensionSupport(VkPhysicalDevice myPhysicalDevice) {
+  uint32_t extensionCount;
+  vkEnumerateDeviceExtensionProperties(myPhysicalDevice, nullptr, &extensionCount, nullptr);
+
+  std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+  vkEnumerateDeviceExtensionProperties(
+      myPhysicalDevice, nullptr, &extensionCount, availableExtensions.data());
+
+  std::set<std::string_view> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+  for (const auto &extension : availableExtensions) {
+    requiredExtensions.erase(extension.extensionName);
+  }
+
+  return requiredExtensions.empty();
+}
+
+SwapChainSupportDetails RLMDevice::querySwapChainSupport(VkPhysicalDevice myPhysicalDevice) {
+  SwapChainSupportDetails details;
+
+  uint32_t formatCount;
+  vkGetPhysicalDeviceSurfaceFormatsKHR(myPhysicalDevice, surface, &formatCount, nullptr);
+
+  if (formatCount != 0) {
+    details.formats.resize(formatCount);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(myPhysicalDevice, surface, &formatCount, details.formats.data());
+  }
+
+  uint32_t presentModeCount;
+  vkGetPhysicalDeviceSurfacePresentModesKHR(myPhysicalDevice, surface, &presentModeCount, nullptr);
+
+  if (presentModeCount != 0) {
+    details.presentModes.resize(presentModeCount);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+        myPhysicalDevice, surface, &presentModeCount, details.presentModes.data());
+  }
+
+  return details;
 }
 
 void RLMDevice::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo) {

@@ -9,6 +9,12 @@
 
 namespace rlm {
 
+struct SwapChainSupportDetails {
+  VkSurfaceCapabilitiesKHR capabilities;
+  std::vector<VkSurfaceFormatKHR> formats;
+  std::vector<VkPresentModeKHR> presentModes;
+};
+
 struct QueueFamilyIndices {
   std::optional<uint32_t> graphicsFamily;
   std::optional<uint32_t> presentFamily;
@@ -19,10 +25,18 @@ struct QueueFamilyIndices {
 class RLMDevice {
  public:
 #ifdef NDEBUG
-  const bool enableValidationLayers = false;
+  static const bool enableValidationLayers = false;
 #else
-  const bool enableValidationLayers = true;
+  static const bool enableValidationLayers = true;
 #endif
+
+  SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
+
+  VkSurfaceKHR getSurface() { return surface; }
+
+  QueueFamilyIndices findPhysicalQueueFamilies() { return findQueueFamilies(physicalDevice); }
+
+  VkDevice getDevice() { return device; }
 
   explicit RLMDevice(RLMWindow &window);
   ~RLMDevice();
@@ -65,23 +79,34 @@ class RLMDevice {
 
   /// Checks properties, features and queue families of a given device to return a suitabilty score
   /// @return An int score based on the suitablity of the device, 0 for incompatible devices
-  int rateDeviceSuitability(VkPhysicalDevice physicalDevice);
+  int rateDeviceSuitability(VkPhysicalDevice myPhysicalDevice);
+
+  ///
+  bool isDeviceSuitable(VkPhysicalDevice myPhysicalDevice);
 
   /// Finds the queue family indices of a given physical device
   /// @return A struct that holds the family indicies
-  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice);
+  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice myPhysicalDevice);
 
-  RLMWindow &window;
+  ///
+  bool checkDeviceExtensionSupport(VkPhysicalDevice myPhysicalDevice);
+
+  ///
+  SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice myPhysicalDevice);
+
+  RLMWindow &rlmWindow;
 
   VkInstance instance;
   VkDebugUtilsMessengerEXT debugMessenger;
   VkSurfaceKHR surface;
   VkDevice device;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+  VkPhysicalDeviceProperties properties;
 
   VkQueue graphicsQueue;
   VkQueue presentQueue;
 
   const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
+  const std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 };
 }  // namespace rlm
