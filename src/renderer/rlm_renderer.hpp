@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include "renderer/rlm_swapchain.hpp"
-#include "renderer/rlm_window.hpp"
+#include "rlm_swapchain.hpp"
+#include "rlm_window.hpp"
 
 namespace rlm {
 class RLMRenderer {

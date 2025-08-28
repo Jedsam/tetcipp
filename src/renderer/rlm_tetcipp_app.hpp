@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rlm_device.hpp"
+#include "rlm_renderer.hpp"
 #include "rlm_window.hpp"
 
 #include <cstdint>
@@ -22,6 +23,7 @@ class RLMApplication {
  private:
   std::unique_ptr<RLMWindow> rlmWindow;
   std::unique_ptr<RLMDevice> rlmDevice;
+  std::unique_ptr<RLMRenderer> rlmRenderer;
   void init();
 
   void mainLoop();

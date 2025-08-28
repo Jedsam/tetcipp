@@ -1,3 +1,4 @@
+#include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
 
 #include <algorithm>
@@ -5,22 +6,31 @@
 #include <stdexcept>
 #include <vector>
 
-#include "renderer/rlm_swapchain.hpp"
+#include "rlm_swapchain.hpp"
 
 namespace rlm {
 
-RLMSwapChain::RLMSwapChain(RLMDevice &rlmDevice) : rlmDevice{rlmDevice} { init(); }
+RLMSwapChain::RLMSwapChain(RLMDevice &rlmDevice, VkExtent2D windowExtent)
+    : rlmDevice{rlmDevice}, windowExtent{windowExtent} {
+  init();
+}
 
 RLMSwapChain::~RLMSwapChain() { vkDestroySwapchainKHR(rlmDevice.getDevice(), swapChain, nullptr); }
 
-void RLMSwapChain::init() { createSwapChain(); }
+void RLMSwapChain::init() {
+  createSwapChain();
+  spdlog::debug("RLMSwapChain::init: Created swap chain");
+}
 
 void RLMSwapChain::createSwapChain() {
   SwapChainSupportDetails swapChainSupport = rlmDevice.getSwapChainSupport();
 
   VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+  spdlog::debug("RLMSwapChain::createSwapChain: Chosen swap surface format");
   VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+  spdlog::debug("RLMSwapChain::createSwapChain: Chosen swap present mode");
   VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
+  spdlog::debug("RLMSwapChain::createSwapChain: Chosen swap extent");
 
   uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
   if (swapChainSupport.capabilities.maxImageCount > 0 &&
@@ -95,13 +105,18 @@ RLMSwapChain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availab
 
 VkExtent2D RLMSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities) {
   if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+    spdlog::debug(
+        "Created swap extent with width: {} height: {}",
+        capabilities.currentExtent.width,
+        capabilities.currentExtent.height);
     return capabilities.currentExtent;
   } else {
-    VkExtent2D actualExtent = windowExtend;
+    VkExtent2D actualExtent = windowExtent;
     actualExtent.width =
         std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
     actualExtent.height = std::clamp(
         actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+    spdlog::debug("Created swap extent with width: {} height: {}", actualExtent.width, actualExtent.height);
 
     return actualExtent;
   }

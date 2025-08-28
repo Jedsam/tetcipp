@@ -1,6 +1,6 @@
 #pragma once
 
-#include "renderer/rlm_device.hpp"
+#include "rlm_device.hpp"
 #include <vulkan/vulkan_core.h>
 
 #include <vector>
@@ -8,7 +8,7 @@
 namespace rlm {
 class RLMSwapChain {
  public:
-  explicit RLMSwapChain(RLMDevice &rlmDevice);
+  RLMSwapChain(RLMDevice &rlmDevice, VkExtent2D windowExtent);
   ~RLMSwapChain();
 
  private:
@@ -22,6 +22,6 @@ class RLMSwapChain {
   RLMDevice &rlmDevice;
 
   VkSwapchainKHR swapChain;
-  VkExtent2D windowExtend;
+  VkExtent2D windowExtent;
 };
 }  // namespace rlm

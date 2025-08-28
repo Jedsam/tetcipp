@@ -20,8 +20,8 @@
 // logger
 #include "spdlog/spdlog.h"
 
-#include "renderer/rlm_window.hpp"
 #include "rlm_device.hpp"
+#include "rlm_window.hpp"
 
 namespace rlm {
 
@@ -67,15 +67,15 @@ void DestroyDebugUtilsMessengerEXT(
 
 RLMDevice::RLMDevice(RLMWindow &window) : rlmWindow{window} {
   createInstance();
-  spdlog::info("RLMDevice: Instance created\n");
+  spdlog::debug("RLMDevice: Instance created\n");
   setupDebugMessenger();
-  spdlog::info("RLMDevice: Debug messenger done\n");
+  spdlog::debug("RLMDevice: Debug messenger done\n");
   createSurface();
-  spdlog::info("RLMDevice: Surface created\n");
+  spdlog::debug("RLMDevice: Surface created\n");
   pickPhysicalDevice();
-  spdlog::info("RLMDevice: physical devices picked\n");
+  spdlog::debug("RLMDevice: physical devices picked\n");
   createLogicalDevice();
-  spdlog::info("RLMDevice: Logical device created\n");
+  spdlog::debug("RLMDevice: Logical device created\n");
 }
 
 RLMDevice::~RLMDevice() {
@@ -169,12 +169,12 @@ void RLMDevice::pickPhysicalDevice() {
   // Use an ordered map to automatically sort candidates by increasing score
   std::multimap<int, VkPhysicalDevice> candidates;
 
-  spdlog::info("RLMDevice::pickPhysicalDevice: About to rate devices!");
+  spdlog::debug("RLMDevice::pickPhysicalDevice: About to rate devices!");
   for (const auto &myDevice : physicalDevices) {
     int score = rateDeviceSuitability(myDevice);
     candidates.insert(std::make_pair(score, myDevice));
   }
-  spdlog::info("RLMDevice::pickPhysicalDevice: Rated all devices succesfully!");
+  spdlog::debug("RLMDevice::pickPhysicalDevice: Rated all devices succesfully!");
 
   // Check if the best candidate is suitable at all
   if (candidates.rbegin()->first > 0) {
@@ -233,15 +233,15 @@ void RLMDevice::createLogicalDevice() {
 }
 
 QueueFamilyIndices RLMDevice::findQueueFamilies(VkPhysicalDevice myPhysicalDevice) {
-  spdlog::info("RLMDevice::findQueueFamilies: Inside the function");
+  spdlog::debug("RLMDevice::findQueueFamilies: Inside the function");
   QueueFamilyIndices indices;
   uint32_t queueFamilyCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(myPhysicalDevice, &queueFamilyCount, nullptr);
-  spdlog::info("RLMDevice::findQueueFamilies: Got the family count");
+  spdlog::debug("RLMDevice::findQueueFamilies: Got the family count");
 
   std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
   vkGetPhysicalDeviceQueueFamilyProperties(myPhysicalDevice, &queueFamilyCount, queueFamilies.data());
-  spdlog::info("RLMDevice::findQueueFamilies: Got the queue family data");
+  spdlog::debug("RLMDevice::findQueueFamilies: Got the queue family data");
 
   uint32_t i = 0;
   for (auto queueFamily : queueFamilies) {
@@ -286,21 +286,21 @@ int RLMDevice::rateDeviceSuitability(VkPhysicalDevice myPhysicalDevice) {
 }
 
 bool RLMDevice::isDeviceSuitable(VkPhysicalDevice myPhysicalDevice) {
-  spdlog::info("RLMDevice::isDeviceSuitable: step 1");
+  spdlog::debug("RLMDevice::isDeviceSuitable: step 1");
   QueueFamilyIndices indices = findQueueFamilies(myPhysicalDevice);
   if (!indices.isComplete())
     return false;
-  spdlog::info("RLMDevice::isDeviceSuitable: step 2");
+  spdlog::debug("RLMDevice::isDeviceSuitable: step 2");
 
   if (!checkDeviceExtensionSupport(myPhysicalDevice))
     return false;
 
-  spdlog::info("RLMDevice::isDeviceSuitable: step 3");
+  spdlog::debug("RLMDevice::isDeviceSuitable: step 3");
   SwapChainSupportDetails swapChainSupport = querySwapChainSupport(myPhysicalDevice);
   if (swapChainSupport.formats.empty() || swapChainSupport.presentModes.empty())
     return false;
 
-  spdlog::info("RLMDevice::isDeviceSuitable: step 4");
+  spdlog::debug("RLMDevice::isDeviceSuitable: step 4");
   return true;
 }
 
@@ -324,21 +324,39 @@ bool RLMDevice::checkDeviceExtensionSupport(VkPhysicalDevice myPhysicalDevice) {
 SwapChainSupportDetails RLMDevice::querySwapChainSupport(VkPhysicalDevice myPhysicalDevice) {
   SwapChainSupportDetails details;
 
+  auto result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(myPhysicalDevice, surface, &details.capabilities);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("failed to get physical device surface capabilities");
+  }
+
   uint32_t formatCount;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(myPhysicalDevice, surface, &formatCount, nullptr);
+  result = vkGetPhysicalDeviceSurfaceFormatsKHR(myPhysicalDevice, surface, &formatCount, nullptr);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("failed to get physical device surface formats");
+  }
 
   if (formatCount != 0) {
     details.formats.resize(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(myPhysicalDevice, surface, &formatCount, details.formats.data());
+    result =
+        vkGetPhysicalDeviceSurfaceFormatsKHR(myPhysicalDevice, surface, &formatCount, details.formats.data());
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("failed to get physical device surface formats");
+    }
   }
 
   uint32_t presentModeCount;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(myPhysicalDevice, surface, &presentModeCount, nullptr);
+  result = vkGetPhysicalDeviceSurfacePresentModesKHR(myPhysicalDevice, surface, &presentModeCount, nullptr);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("failed to get physical device surface present modes");
+  }
 
   if (presentModeCount != 0) {
     details.presentModes.resize(presentModeCount);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(
+    result = vkGetPhysicalDeviceSurfacePresentModesKHR(
         myPhysicalDevice, surface, &presentModeCount, details.presentModes.data());
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("failed to get physical device surface present modes");
+    }
   }
 
   return details;

@@ -1,10 +1,10 @@
 
 #include <memory>
 
-#include "renderer/rlm_device.hpp"
-#include "renderer/rlm_renderer.hpp"
-#include "renderer/rlm_swapchain.hpp"
-#include "renderer/rlm_window.hpp"
+#include "rlm_device.hpp"
+#include "rlm_renderer.hpp"
+#include "rlm_swapchain.hpp"
+#include "rlm_window.hpp"
 
 namespace rlm {
 
@@ -21,6 +21,6 @@ void RLMRenderer::recreateSwapChain() {
     extent = rlmWindow.getExtent();
     glfwWaitEvents();
   }
-  rlmSwapChain = std::make_unique<RLMSwapChain>(rlmDevice);
+  rlmSwapChain = std::make_unique<RLMSwapChain>(rlmDevice, extent);
 }
 }  // namespace rlm

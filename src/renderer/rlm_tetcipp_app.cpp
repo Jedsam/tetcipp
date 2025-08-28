@@ -29,6 +29,11 @@ void RLMApplication::init() {
   if (rlmDevice == nullptr) {
     throw std::runtime_error("RLMDevice creation was unsuccessful");
   }
+
+  rlmRenderer = std::make_unique<RLMRenderer>(*rlmWindow, *rlmDevice);
+  if (rlmDevice == nullptr) {
+    throw std::runtime_error("RLMRenderer creation was unsuccessful");
+  }
 }
 
 void RLMApplication::mainLoop() {

@@ -5,7 +5,7 @@
 #include <optional>
 #include <vector>
 
-#include "renderer/rlm_window.hpp"
+#include "rlm_window.hpp"
 
 namespace rlm {
 
