@@ -18,10 +18,12 @@ class RLMSwapChain {
 
   void init();
   void createSwapChain();
+  void createImageViews();
 
   RLMDevice &rlmDevice;
 
   std::vector<VkImage> swapChainImages;
+  std::vector<VkImageView> swapChainImageViews;
 
   VkSwapchainKHR swapChain;
   VkFormat swapChainImageFormat;
