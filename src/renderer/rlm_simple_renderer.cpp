@@ -20,6 +20,8 @@ SimpleRenderSystem::~SimpleRenderSystem() {}
 
 SimpleRenderSystem::SimpleRenderSystem(RLMDevice &device) : rlmDevice{device} { createPipeline(); }
 
-void SimpleRenderSystem::createPipeline() { rlmPipeline = std::make_unique<RLMPipeline>(rlmDevice, "", ""); }
+void SimpleRenderSystem::createPipeline() {
+  rlmPipeline = std::make_unique<RLMPipeline>(rlmDevice, "shaders/vert.spv", "shaders/frag.spv");
+}
 
 }  // namespace rlm
