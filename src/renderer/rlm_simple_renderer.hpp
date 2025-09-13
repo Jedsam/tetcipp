@@ -17,9 +17,11 @@ class SimpleRenderSystem {
 
  private:
   void createPipeline();
+  void createPipelineLayout();
 
   RLMDevice &rlmDevice;
   std::unique_ptr<RLMPipeline> rlmPipeline;
+  VkPipelineLayout pipelineLayout;
 };
 
 }  // namespace rlm

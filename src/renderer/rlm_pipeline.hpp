@@ -9,6 +9,27 @@
 
 namespace rlm {
 
+struct PipelineConfigInfo {
+  PipelineConfigInfo() = default;
+  PipelineConfigInfo(const PipelineConfigInfo &) = delete;
+  PipelineConfigInfo &operator=(const PipelineConfigInfo &) = delete;
+
+  std::vector<VkVertexInputBindingDescription> bindingDescription{};
+  std::vector<VkVertexInputAttributeDescription> attributeDescription{};
+  VkPipelineViewportStateCreateInfo viewportInfo;
+  VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo;
+  VkPipelineRasterizationStateCreateInfo rasterizationInfo;
+  VkPipelineMultisampleStateCreateInfo multisampleInfo;
+  VkPipelineColorBlendAttachmentState colorBlendAttachment;
+  VkPipelineColorBlendStateCreateInfo colorBlendInfo;
+  VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
+  std::vector<VkDynamicState> dynamicStateEnables;
+  VkPipelineDynamicStateCreateInfo dynamicStateInfo;
+  VkPipelineLayout pipelineLayout = nullptr;
+  VkRenderPass renderPass = nullptr;
+  uint32_t subpass = 0;
+};
+
 class RLMPipeline {
  public:
   RLMPipeline(RLMDevice &rlmDevice, const std::string &vertFilePath, const std::string &fragFilePath);
@@ -23,6 +44,9 @@ class RLMPipeline {
 
   void createGraphicsPipeline(const std::string &vertFilePath, const std::string &fragFilePath);
   void createShaderModule(const std::vector<char> &code, VkShaderModule *shaderModule);
+
+  static void defaultPipelineConfigInfo(PipelineConfigInfo &pipelineConfigInfo);
+  static void enableAlphaBlending(PipelineConfigInfo &pipelineConfigInfo);
 
   VkShaderModule vertShaderModule;
   VkShaderModule fragShaderModule;
