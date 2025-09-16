@@ -16,6 +16,8 @@ RLMSwapChain::RLMSwapChain(RLMDevice &rlmDevice, VkExtent2D windowExtent)
 }
 
 RLMSwapChain::~RLMSwapChain() {
+  vkDestroyRenderPass(rlmDevice.getDevice(), renderPass, nullptr);
+
   for (auto imageView : swapChainImageViews) {
     vkDestroyImageView(rlmDevice.getDevice(), imageView, nullptr);
   }
@@ -27,6 +29,77 @@ void RLMSwapChain::init() {
   spdlog::debug("RLMSwapChain::init: Created swap chain");
   createImageViews();
   spdlog::debug("RLMSwapChain::init: Created image views");
+  createRenderPass();
+  spdlog::debug("RLMSwapChain::init: Created render pass");
+}
+
+void RLMSwapChain::createRenderPass() {
+  VkAttachmentDescription colorAttachment{};
+  // same as swap chain
+  colorAttachment.format = swapChainImageFormat;
+  // For multi sampling
+  colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+  // The loadOp and storeOp determine what to do with the data in the attachment before rendering and after
+  // rendering. We have the following choices for loadOp:
+  //
+  // -VK_ATTACHMENT_LOAD_OP_LOAD: Preserve the existing contents of the attachment
+  // -VK_ATTACHMENT_LOAD_OP_CLEAR: Clear the values to a constant at the start
+  // -VK_ATTACHMENT_LOAD_OP_DONT_CARE: Existing contents are undefined; we don't care about them
+  colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  // There are only two possibilities for the storeOp:
+  //
+  // -VK_ATTACHMENT_STORE_OP_STORE: Rendered contents will be stored in memory and can be read later
+  // -VK_ATTACHMENT_STORE_OP_DONT_CARE: Contents of the framebuffer will be undefined after the rendering
+  // operation
+  colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  // For stencil operations
+  colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  // Textures and framebuffers in Vulkan are represented by VkImage objects with a certain pixel format,
+  // however the layout of the pixels in memory can change based on what you're trying to do with an image.
+  // Some of the most common layouts are:
+
+  // -VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: Images used as color attachment
+  // -VK_IMAGE_LAYOUT_PRESENT_SRC_KHR: Images to be presented in the swap chain
+  // -VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL: Images to be used as destination for a memory copy operation
+  colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+  // The attachment parameter specifies which attachment to reference by its index in the attachment
+  // descriptions array The layout specifies which layout we would like the attachment to have during a
+  // subpass that uses this reference. Vulkan will automatically transition the attachment to this layout when
+  // the subpass is started. We intend to use the attachment to function as a color buffer and the
+  // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL layout will give us the best performance, as its name implies.
+  VkAttachmentReference colorAttachmentRef{};
+  colorAttachmentRef.attachment = 0;
+  colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+  // Vulkan may also support compute subpasses in the future, so we have to be explicit about this being a
+  // graphics subpass.
+  VkSubpassDescription subpass{};
+  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  // The index of the attachment in this array is directly referenced from the fragment shader with the
+  // layout(location = 0) out vec4 outColor directive!
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &colorAttachmentRef;
+  // The following other types of attachments can be referenced by a subpass:
+  // -pInputAttachments: Attachments that are read from a shader
+  // -pResolveAttachments: Attachments used for multisampling color attachments
+  // -pDepthStencilAttachment: Attachment for depth and stencil data
+  // -pPreserveAttachments: Attachments that are not used by this subpass, but for which the data must be
+  // preserved
+
+  VkRenderPassCreateInfo renderPassInfo{};
+  renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  renderPassInfo.attachmentCount = 1;
+  renderPassInfo.pAttachments = &colorAttachment;
+  renderPassInfo.subpassCount = 1;
+  renderPassInfo.pSubpasses = &subpass;
+
+  auto result = vkCreateRenderPass(rlmDevice.getDevice(), &renderPassInfo, nullptr, &renderPass);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("failed to create render pass!");
+  }
 }
 
 void RLMSwapChain::createImageViews() {
