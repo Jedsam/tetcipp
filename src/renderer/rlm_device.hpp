@@ -38,6 +38,10 @@ class RLMDevice {
 
   VkDevice getDevice() { return device; }
 
+  VkPhysicalDevice getPhyiscalDevice() { return physicalDevice; }
+
+  VkCommandPool getCommandPool() { return commandPool; }
+
   explicit RLMDevice(RLMWindow &window);
   ~RLMDevice();
 
@@ -60,6 +64,9 @@ class RLMDevice {
   /// Function to create a logical device based on physical device which also holds queue information
   /// @throws std::runtime_error if instance creation fails.
   void createLogicalDevice();
+
+  ///
+  void createCommandPool();
 
   /// Template VkDebugUtilsMessengerCreateInfoEXT struct to be reused
   void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
@@ -102,9 +109,10 @@ class RLMDevice {
   VkDevice device;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   VkPhysicalDeviceProperties properties;
-
   VkQueue graphicsQueue;
   VkQueue presentQueue;
+
+  VkCommandPool commandPool;
 
   const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
   const std::vector<const char *> deviceExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};

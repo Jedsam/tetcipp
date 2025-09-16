@@ -76,9 +76,12 @@ RLMDevice::RLMDevice(RLMWindow &window) : rlmWindow{window} {
   spdlog::debug("RLMDevice: physical devices picked\n");
   createLogicalDevice();
   spdlog::debug("RLMDevice: Logical device created\n");
+  createCommandPool();
+  spdlog::debug("RLMDevice: Command pool created\n");
 }
 
 RLMDevice::~RLMDevice() {
+  vkDestroyCommandPool(device, commandPool, nullptr);
   // Destroy them in reverse order they were created
   vkDestroyDevice(device, nullptr);
 
@@ -88,6 +91,25 @@ RLMDevice::~RLMDevice() {
 
   vkDestroySurfaceKHR(instance, surface, nullptr);
   vkDestroyInstance(instance, nullptr);
+}
+
+void RLMDevice::createCommandPool() {
+  QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
+
+  VkCommandPoolCreateInfo poolInfo{};
+  // There are two possible flags for command pools:
+
+  // -VK_COMMAND_POOL_CREATE_TRANSIENT_BIT: Hint that command buffers are rerecorded with new commands very
+  // often (may change memory allocation behavior)
+  // -VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT: Allow
+  // command buffers to be rerecorded individually, without this flag they all have to be reset together
+  poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+  poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+  poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+  auto result = vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("failed to create command pool!");
+  }
 }
 
 void RLMDevice::createInstance() {

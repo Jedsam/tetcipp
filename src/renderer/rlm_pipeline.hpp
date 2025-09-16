@@ -47,6 +47,8 @@ class RLMPipeline {
   static void defaultPipelineConfigInfo(PipelineConfigInfo &pipelineConfigInfo);
   static void enableAlphaBlending(PipelineConfigInfo &pipelineConfigInfo);
 
+  void bindCommandBuffer(VkCommandBuffer commandBuffer);
+
  private:
   static std::vector<char> readFile(const std::string &filepath);
 

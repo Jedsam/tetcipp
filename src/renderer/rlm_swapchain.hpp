@@ -11,6 +11,12 @@ class RLMSwapChain {
   RLMSwapChain(RLMDevice &rlmDevice, VkExtent2D windowExtent);
   ~RLMSwapChain();
 
+  VkRenderPass getRenderPass() { return renderPass; }
+
+  VkFramebuffer getFrameBuffer(int imageIndex) { return swapChainFramebuffers[imageIndex]; }
+
+  VkExtent2D getExtent() { return swapChainExtent; }
+
  private:
   VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
   VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes);

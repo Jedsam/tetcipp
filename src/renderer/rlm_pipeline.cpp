@@ -45,6 +45,10 @@ std::vector<char> RLMPipeline::readFile(const std::string &filename) {
   return buffer;
 }
 
+void RLMPipeline::bindCommandBuffer(VkCommandBuffer commandBuffer) {
+  vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+}
+
 void RLMPipeline::createGraphicsPipeline(
     const std::string &vertFilePath,
     const std::string &fragFilePath,
