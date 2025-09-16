@@ -1,3 +1,4 @@
+#include <cassert>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -9,19 +10,21 @@
 #endif
 
 namespace rlm {
-using std::string;
 
 RLMPipeline::RLMPipeline(
     RLMDevice &rlmDevice,
     const std::string &vertFilePath,
-    const std::string &fragFilePath)
+    const std::string &fragFilePath,
+    const PipelineConfigInfo &configInfo)
     : rlmDevice(rlmDevice) {
-  createGraphicsPipeline(vertFilePath, fragFilePath);
+  createGraphicsPipeline(vertFilePath, fragFilePath, configInfo);
 }
 
 RLMPipeline::~RLMPipeline() {
   vkDestroyShaderModule(rlmDevice.getDevice(), fragShaderModule, nullptr);
   vkDestroyShaderModule(rlmDevice.getDevice(), vertShaderModule, nullptr);
+
+  vkDestroyPipeline(rlmDevice.getDevice(), graphicsPipeline, nullptr);
 }
 
 std::vector<char> RLMPipeline::readFile(const std::string &filename) {
@@ -42,7 +45,17 @@ std::vector<char> RLMPipeline::readFile(const std::string &filename) {
   return buffer;
 }
 
-void RLMPipeline::createGraphicsPipeline(const string &vertFilePath, const std::string &fragFilePath) {
+void RLMPipeline::createGraphicsPipeline(
+    const std::string &vertFilePath,
+    const std::string &fragFilePath,
+    const PipelineConfigInfo &configInfo) {
+  assert(
+      configInfo.pipelineLayout != VK_NULL_HANDLE &&
+      "Cannot create graphics pipeline:: no pipelineLayout provided in configInfo");
+  assert(
+      configInfo.renderPass != VK_NULL_HANDLE &&
+      "Cannot create graphics pipeline:: no renderPass provided in configInfo");
+
   auto vertShaderCode = readFile(vertFilePath);
   auto fragShaderCode = readFile(fragFilePath);
 
@@ -63,6 +76,52 @@ void RLMPipeline::createGraphicsPipeline(const string &vertFilePath, const std::
   fragShaderStageInfo.pName = "main";
   // fragShaderStageInfo.pSpecializationInfo;
   VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+  VkGraphicsPipelineCreateInfo pipelineInfo{};
+  pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+  pipelineInfo.stageCount = 2;
+  pipelineInfo.pStages = shaderStages;
+
+  pipelineInfo.pVertexInputState = &configInfo.vertexInputInfo;
+  pipelineInfo.pInputAssemblyState = &configInfo.inputAssemblyInfo;
+  pipelineInfo.pViewportState = &configInfo.viewportInfo;
+  pipelineInfo.pRasterizationState = &configInfo.rasterizationInfo;
+  pipelineInfo.pMultisampleState = &configInfo.multisampleInfo;
+  pipelineInfo.pDepthStencilState = nullptr;  // Optional
+  pipelineInfo.pColorBlendState = &configInfo.colorBlendInfo;
+  pipelineInfo.pDynamicState = &configInfo.dynamicStateInfo;
+
+  pipelineInfo.layout = configInfo.pipelineLayout;
+
+  // It is also possible to use other render passes with this pipeline instead of this specific instance, but
+  // they have to be compatible with renderPass. The requirements for compatibility are described here :
+  // https://docs.vulkan.org/spec/latest/chapters/renderpass.html#renderpass-compatibility
+  pipelineInfo.renderPass = configInfo.renderPass;
+  pipelineInfo.subpass = 0;
+  // Vulkan allows you to create a new graphics pipeline by deriving from an existing pipeline. The idea of
+  // pipeline derivatives is that it is less expensive to set up pipelines when they have much functionality
+  // in common with an existing pipeline and switching between pipelines from the same parent can also be done
+  // quicker. You can either specify the handle of an existing pipeline with basePipelineHandle or reference
+  // another pipeline that is about to be created by index with basePipelineIndex. These values are only used
+  // if the VK_PIPELINE_CREATE_DERIVATIVE_BIT flag is also specified in the flags field of
+  // VkGraphicsPipelineCreateInfo.
+  pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;  // Optional
+  pipelineInfo.basePipelineIndex = -1;               // Optional
+
+  // The vkCreateGraphicsPipelines function actually has more parameters than the usual object creation
+  // functions in Vulkan. It is designed to take multiple VkGraphicsPipelineCreateInfo objects and create
+  // multiple VkPipeline objects in a single call.
+  //
+  // The second parameter, for which we've passed the VK_NULL_HANDLE argument, references an optional
+  // VkPipelineCache object. A pipeline cache can be used to store and reuse data relevant to pipeline
+  // creation across multiple calls to vkCreateGraphicsPipelines and even across program executions if the
+  // cache is stored to a file. This makes it possible to significantly speed up pipeline creation at a later
+  // time.
+  auto result = vkCreateGraphicsPipelines(
+      rlmDevice.getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("failed to create graphics pipeline!");
+  }
 }
 
 void RLMPipeline::createShaderModule(const std::vector<char> &code, VkShaderModule *shaderModule) {
@@ -89,34 +148,35 @@ void RLMPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
   configInfo.viewportInfo.scissorCount = 1;
 
   VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-  vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertexInputInfo.vertexBindingDescriptionCount = 0;
-  vertexInputInfo.pVertexBindingDescriptions = nullptr;  // Optional
-  vertexInputInfo.vertexAttributeDescriptionCount = 0;
-  vertexInputInfo.pVertexAttributeDescriptions = nullptr;  // Optional
+  configInfo.vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  configInfo.vertexInputInfo.vertexBindingDescriptionCount = 0;
+  configInfo.vertexInputInfo.pVertexBindingDescriptions = nullptr;  // Optional
+  configInfo.vertexInputInfo.vertexAttributeDescriptionCount = 0;
+  configInfo.vertexInputInfo.pVertexAttributeDescriptions = nullptr;  // Optional
 
   // Specifieswhat kind of geometry will be drawn from the vertices and if primitive restart should be
   // enabled. The topology member can have values like:
   //
   // -VK_PRIMITIVE_TOPOLOGY_POINT_LIST: points from vertices
   // -VK_PRIMITIVE_TOPOLOGY_LINE_LIST: line from every 2 vertices without reuse
-  // -VK_PRIMITIVE_TOPOLOGY_LINE_STRIP: the end vertex of every line is used as start vertex for the next line
-  // -VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST: triangle from every 3 vertices without reuse
-  // -VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP: the second and third vertex of every triangle are used as first
-  // two vertices of the next triangle
+  // -VK_PRIMITIVE_TOPOLOGY_LINE_STRIP: the end vertex of every line is used as start vertex for the next
+  // line -VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST: triangle from every 3 vertices without reuse
+  // -VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP: the second and third vertex of every triangle are used as
+  // first two vertices of the next triangle
   configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
   configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
   configInfo.inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
 
   configInfo.rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-  // If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far planes are clamped
-  // to them as opposed to discarding them. This is useful in some special cases like shadow maps. Using this
-  // requires enabling a GPU feature.
+  // If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far planes are
+  // clamped to them as opposed to discarding them. This is useful in some special cases like shadow maps.
+  // Using this requires enabling a GPU feature.
   configInfo.rasterizationInfo.depthClampEnable = VK_FALSE;
-  // If rasterizerDiscardEnable is set to VK_TRUE, then geometry never passes through the rasterizer stage.
-  // This basically disables any output to the framebuffer.
+  // If rasterizerDiscardEnable is set to VK_TRUE, then geometry never passes through the rasterizer
+  // stage. This basically disables any output to the framebuffer.
   configInfo.rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
-  // The polygonMode determines how fragments are generated for geometry. The following modes are available:
+  // The polygonMode determines how fragments are generated for geometry. The following modes are
+  // available:
   //
   // -VK_POLYGON_MODE_FILL: fill the area of the polygon with fragments
   // -VK_POLYGON_MODE_LINE: polygon edges are drawn as lines
@@ -128,9 +188,9 @@ void RLMPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
   // than 1.0f requires you to enable the wideLines GPU feature.
   // to be setup later
   configInfo.rasterizationInfo.lineWidth = 1.0f;
-  // The cullMode variable determines the type of face culling to use. You can disable culling, cull the front
-  // faces, cull the back faces or both. The frontFace variable specifies the vertex order for faces to be
-  // considered front-facing and can be clockwise or counterclockwise.
+  // The cullMode variable determines the type of face culling to use. You can disable culling, cull the
+  // front faces, cull the back faces or both. The frontFace variable specifies the vertex order for faces
+  // to be considered front-facing and can be clockwise or counterclockwise.
   configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
   configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
   // The rasterizer can alter the depth values by adding a constant value or biasing them based on a
@@ -140,12 +200,12 @@ void RLMPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
   configInfo.rasterizationInfo.depthBiasClamp = 0.0f;           // Optional
   configInfo.rasterizationInfo.depthBiasSlopeFactor = 0.0f;     // Optional
 
-  // Configure a setting which is about multiple sampling, one of the ways to perform anti-aliasing. It works
-  // by combining the fragment shader results of multiple polygons that rasterize to the same pixel. This
-  // mainly occurs along edges, which is also where the most noticeable aliasing artifacts occur. Because it
-  // doesn't need to run the fragment shader multiple times if only one polygon maps to a pixel, it is
-  // significantly less expensive than simply rendering to a higher resolution and then downscaling. Enabling
-  // it requires enabling a GPU feature.
+  // Configure a setting which is about multiple sampling, one of the ways to perform anti-aliasing. It
+  // works by combining the fragment shader results of multiple polygons that rasterize to the same pixel.
+  // This mainly occurs along edges, which is also where the most noticeable aliasing artifacts occur.
+  // Because it doesn't need to run the fragment shader multiple times if only one polygon maps to a
+  // pixel, it is significantly less expensive than simply rendering to a higher resolution and then
+  // downscaling. Enabling it requires enabling a GPU feature.
   configInfo.multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
   configInfo.multisampleInfo.sampleShadingEnable = VK_FALSE;
   configInfo.multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -154,12 +214,13 @@ void RLMPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
   configInfo.multisampleInfo.alphaToCoverageEnable = VK_FALSE;  // Optional
   configInfo.multisampleInfo.alphaToOneEnable = VK_FALSE;       // Optional
 
-  // This per-framebuffer struct allows you to configure the first way of color blending. The operations that
-  // will be performed are best demonstrated using the following pseudocode:
+  // This per-framebuffer struct allows you to configure the first way of color blending. The operations
+  // that will be performed are best demonstrated using the following pseudocode:
   //
   // if (blendEnable) {
   //     finalColor.rgb = (srcColorBlendFactor * newColor.rgb) <colorBlendOp> (dstColorBlendFactor *
-  //     oldColor.rgb); finalColor.a = (srcAlphaBlendFactor * newColor.a) <alphaBlendOp> (dstAlphaBlendFactor
+  //     oldColor.rgb); finalColor.a = (srcAlphaBlendFactor * newColor.a) <alphaBlendOp>
+  //     (dstAlphaBlendFactor
   //     * oldColor.a);
   // } else {
   //     finalColor = newColor;

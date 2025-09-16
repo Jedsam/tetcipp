@@ -9,14 +9,14 @@ namespace rlm {
 
 class SimpleRenderSystem {
  public:
-  explicit SimpleRenderSystem(RLMDevice &rlmDevice);
+  explicit SimpleRenderSystem(RLMDevice &device, VkRenderPass renderPass);
   ~SimpleRenderSystem();
 
   SimpleRenderSystem(const SimpleRenderSystem &) = delete;
   SimpleRenderSystem &operator=(const SimpleRenderSystem &) = delete;
 
  private:
-  void createPipeline();
+  void createPipeline(VkRenderPass renderPass);
   void createPipelineLayout();
 
   RLMDevice &rlmDevice;

@@ -23,6 +23,7 @@ struct PipelineConfigInfo {
   VkPipelineColorBlendAttachmentState colorBlendAttachment;
   VkPipelineColorBlendStateCreateInfo colorBlendInfo;
   VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
+  VkPipelineVertexInputStateCreateInfo vertexInputInfo;
   std::vector<VkDynamicState> dynamicStateEnables;
   VkPipelineDynamicStateCreateInfo dynamicStateInfo;
   VkPipelineLayout pipelineLayout = nullptr;
@@ -32,24 +33,34 @@ struct PipelineConfigInfo {
 
 class RLMPipeline {
  public:
-  RLMPipeline(RLMDevice &rlmDevice, const std::string &vertFilePath, const std::string &fragFilePath);
+  RLMPipeline(
+      RLMDevice &rlmDevice,
+      const std::string &vertFilePath,
+      const std::string &fragFilePath,
+      const PipelineConfigInfo &configInfo);
   ~RLMPipeline();
 
   // Delete assignment and clone
   RLMPipeline(const RLMPipeline &) = delete;
   RLMPipeline &operator=(const RLMPipeline &) = delete;
 
- private:
-  static std::vector<char> readFile(const std::string &filepath);
-
-  void createGraphicsPipeline(const std::string &vertFilePath, const std::string &fragFilePath);
-  void createShaderModule(const std::vector<char> &code, VkShaderModule *shaderModule);
-
   static void defaultPipelineConfigInfo(PipelineConfigInfo &pipelineConfigInfo);
   static void enableAlphaBlending(PipelineConfigInfo &pipelineConfigInfo);
 
+ private:
+  static std::vector<char> readFile(const std::string &filepath);
+
+  void createGraphicsPipeline(
+      const std::string &vertFilePath,
+      const std::string &fragFilePath,
+      const PipelineConfigInfo &configInfo);
+  void createShaderModule(const std::vector<char> &code, VkShaderModule *shaderModule);
+
   VkShaderModule vertShaderModule;
   VkShaderModule fragShaderModule;
+
+  VkPipeline graphicsPipeline;
+  VkPipelineLayout pipelineLayout;
 
   RLMDevice &rlmDevice;
 };

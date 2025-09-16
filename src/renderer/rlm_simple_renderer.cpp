@@ -1,9 +1,9 @@
 
 #include <GLFW/glfw3.h>
-#include <memory>
 #include <vulkan/vulkan_core.h>
 
 #include <cassert>
+#include <memory>
 
 // libs
 // #define GLM_FORCE_RADIANS
@@ -12,6 +12,7 @@
 // #include <glm/gtc/constants.hpp>
 // #include <glm/common.hpp>
 
+#include "renderer/rlm_pipeline.hpp"
 #include "rlm_simple_renderer.hpp"
 
 namespace rlm {
@@ -20,13 +21,18 @@ SimpleRenderSystem::~SimpleRenderSystem() {
   vkDestroyPipelineLayout(rlmDevice.getDevice(), pipelineLayout, nullptr);
 }
 
-SimpleRenderSystem::SimpleRenderSystem(RLMDevice &device) : rlmDevice{device} {
-  createPipeline();
+SimpleRenderSystem::SimpleRenderSystem(RLMDevice &device, VkRenderPass renderPass) : rlmDevice{device} {
   createPipelineLayout();
+  createPipeline(renderPass);
 }
 
-void SimpleRenderSystem::createPipeline() {
-  rlmPipeline = std::make_unique<RLMPipeline>(rlmDevice, "shaders/vert.spv", "shaders/frag.spv");
+void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
+  PipelineConfigInfo pipelineConfigInfo{};
+  RLMPipeline::defaultPipelineConfigInfo(pipelineConfigInfo);
+  pipelineConfigInfo.renderPass = renderPass;
+  pipelineConfigInfo.pipelineLayout = pipelineLayout;
+  rlmPipeline =
+      std::make_unique<RLMPipeline>(rlmDevice, "shaders/vert.spv", "shaders/frag.spv", pipelineConfigInfo);
 }
 
 void SimpleRenderSystem::createPipelineLayout() {
@@ -37,8 +43,8 @@ void SimpleRenderSystem::createPipelineLayout() {
   pipelineLayoutInfo.pushConstantRangeCount = 0;     // Optional
   pipelineLayoutInfo.pPushConstantRanges = nullptr;  // Optional
 
-  if (vkCreatePipelineLayout(rlmDevice.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) !=
-      VK_SUCCESS) {
+  auto result = vkCreatePipelineLayout(rlmDevice.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
+  if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to create pipeline layout!");
   }
 }
