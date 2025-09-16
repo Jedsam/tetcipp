@@ -16,6 +16,10 @@ RLMSwapChain::RLMSwapChain(RLMDevice &rlmDevice, VkExtent2D windowExtent)
 }
 
 RLMSwapChain::~RLMSwapChain() {
+  for (auto framebuffer : swapChainFramebuffers) {
+    vkDestroyFramebuffer(rlmDevice.getDevice(), framebuffer, nullptr);
+  }
+
   vkDestroyRenderPass(rlmDevice.getDevice(), renderPass, nullptr);
 
   for (auto imageView : swapChainImageViews) {
@@ -31,6 +35,30 @@ void RLMSwapChain::init() {
   spdlog::debug("RLMSwapChain::init: Created image views");
   createRenderPass();
   spdlog::debug("RLMSwapChain::init: Created render pass");
+  createFramebuffers();
+  spdlog::debug("RLMSwapChain::init: Created frame buffers");
+}
+
+void RLMSwapChain::createFramebuffers() {
+  swapChainFramebuffers.resize(swapChainImageViews.size());
+  for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+    VkImageView attachments[] = {swapChainImageViews[i]};
+
+    VkFramebufferCreateInfo framebufferInfo{};
+    framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebufferInfo.renderPass = renderPass;
+    framebufferInfo.attachmentCount = 1;
+    framebufferInfo.pAttachments = attachments;
+    framebufferInfo.width = swapChainExtent.width;
+    framebufferInfo.height = swapChainExtent.height;
+    framebufferInfo.layers = 1;
+
+    auto result =
+        vkCreateFramebuffer(rlmDevice.getDevice(), &framebufferInfo, nullptr, &swapChainFramebuffers[i]);
+    if (result != VK_SUCCESS) {
+      throw std::runtime_error("failed to create framebuffer!");
+    }
+  }
 }
 
 void RLMSwapChain::createRenderPass() {
@@ -39,8 +67,8 @@ void RLMSwapChain::createRenderPass() {
   colorAttachment.format = swapChainImageFormat;
   // For multi sampling
   colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-  // The loadOp and storeOp determine what to do with the data in the attachment before rendering and after
-  // rendering. We have the following choices for loadOp:
+  // The loadOp and storeOp determine what to do with the data in the attachment before rendering and
+  // after rendering. We have the following choices for loadOp:
   //
   // -VK_ATTACHMENT_LOAD_OP_LOAD: Preserve the existing contents of the attachment
   // -VK_ATTACHMENT_LOAD_OP_CLEAR: Clear the values to a constant at the start
@@ -56,8 +84,8 @@ void RLMSwapChain::createRenderPass() {
   colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
   // Textures and framebuffers in Vulkan are represented by VkImage objects with a certain pixel format,
-  // however the layout of the pixels in memory can change based on what you're trying to do with an image.
-  // Some of the most common layouts are:
+  // however the layout of the pixels in memory can change based on what you're trying to do with an
+  // image. Some of the most common layouts are:
 
   // -VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: Images used as color attachment
   // -VK_IMAGE_LAYOUT_PRESENT_SRC_KHR: Images to be presented in the swap chain
@@ -67,9 +95,10 @@ void RLMSwapChain::createRenderPass() {
 
   // The attachment parameter specifies which attachment to reference by its index in the attachment
   // descriptions array The layout specifies which layout we would like the attachment to have during a
-  // subpass that uses this reference. Vulkan will automatically transition the attachment to this layout when
-  // the subpass is started. We intend to use the attachment to function as a color buffer and the
-  // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL layout will give us the best performance, as its name implies.
+  // subpass that uses this reference. Vulkan will automatically transition the attachment to this layout
+  // when the subpass is started. We intend to use the attachment to function as a color buffer and the
+  // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL layout will give us the best performance, as its name
+  // implies.
   VkAttachmentReference colorAttachmentRef{};
   colorAttachmentRef.attachment = 0;
   colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
