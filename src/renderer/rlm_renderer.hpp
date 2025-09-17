@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vulkan/vulkan_core.h>
 
 #include "rlm_swapchain.hpp"
 #include "rlm_window.hpp"
@@ -17,6 +18,10 @@ class RLMRenderer {
   void beginRenderPass();
   void endRenderPass();
 
+  VkRenderPass getRenderPass() { return rlmSwapChain->getRenderPass(); }
+
+  VkCommandBuffer getCommandBuffer() { return commandBuffer; }
+
  private:
   RLMDevice &rlmDevice;
   RLMWindow &rlmWindow;
@@ -25,7 +30,15 @@ class RLMRenderer {
   VkCommandBuffer commandBuffer;
 
   uint32_t currentImageIndex;
+
   void recreateSwapChain();
   void createCommandBuffer();
+  void createSyncObjects();
+
+  void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+  VkSemaphore imageAvailableSemaphore;
+  VkSemaphore renderFinishedSemaphore;
+  VkFence inFlightFence;
 };
 }  // namespace rlm

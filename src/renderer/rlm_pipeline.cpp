@@ -6,7 +6,7 @@
 #include "rlm_pipeline.hpp"
 
 #ifndef ENGINE_DIR
-#define ENGINE_DIR "../"
+#define ENGINE_DIR "./"
 #endif
 
 namespace rlm {
@@ -141,11 +141,11 @@ void RLMPipeline::createShaderModule(const std::vector<char> &code, VkShaderModu
 }
 
 void RLMPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
-  std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
-
+  configInfo.dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
   configInfo.dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-  configInfo.dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-  configInfo.dynamicStateInfo.pDynamicStates = dynamicStates.data();
+  configInfo.dynamicStateInfo.dynamicStateCount =
+      static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
+  configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
 
   configInfo.viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
   configInfo.viewportInfo.viewportCount = 1;

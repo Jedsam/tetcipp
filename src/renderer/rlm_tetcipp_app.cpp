@@ -1,8 +1,10 @@
+#include "renderer/rlm_simple_renderer.hpp"
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include <cassert>
+#include <chrono>
 #include <memory>
 
 #include "rlm_tetcipp_app.hpp"
@@ -37,9 +39,27 @@ void RLMApplication::init() {
 }
 
 void RLMApplication::mainLoop() {
+  SimpleRenderSystem simpleRenderSystem{*rlmDevice, rlmRenderer->getRenderPass()};
+
+  auto currentTime = std::chrono::high_resolution_clock::now();
+
   while (!rlmWindow->shouldClose()) {
+    auto newTime = std::chrono::high_resolution_clock::now();
+    float frameTime =
+        std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
+    currentTime = newTime;
+
+    rlmRenderer->beginFrame();
+    rlmRenderer->beginRenderPass();
+
+    simpleRenderSystem.renderGameObjects(rlmRenderer->getCommandBuffer());
+    // record stuff
+    rlmRenderer->endRenderPass();
+    rlmRenderer->endFrame();
     glfwPollEvents();
   }
+
+  vkDeviceWaitIdle(rlmDevice->getDevice());
 }
 
 void RLMApplication::cleanup() {}

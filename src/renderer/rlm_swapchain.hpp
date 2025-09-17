@@ -17,6 +17,8 @@ class RLMSwapChain {
 
   VkExtent2D getExtent() { return swapChainExtent; }
 
+  VkSwapchainKHR getSwapChain() { return swapChain; }
+
  private:
   VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
   VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes);

@@ -252,6 +252,7 @@ void RLMDevice::createLogicalDevice() {
   }
 
   vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+  vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }
 
 QueueFamilyIndices RLMDevice::findQueueFamilies(VkPhysicalDevice myPhysicalDevice) {

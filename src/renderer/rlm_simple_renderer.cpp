@@ -31,8 +31,13 @@ void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
   RLMPipeline::defaultPipelineConfigInfo(pipelineConfigInfo);
   pipelineConfigInfo.renderPass = renderPass;
   pipelineConfigInfo.pipelineLayout = pipelineLayout;
-  rlmPipeline =
-      std::make_unique<RLMPipeline>(rlmDevice, "shaders/vert.spv", "shaders/frag.spv", pipelineConfigInfo);
+  rlmPipeline = std::make_unique<RLMPipeline>(
+      rlmDevice, "shaders/shader.vert.spv", "shaders/shader.frag.spv", pipelineConfigInfo);
+}
+
+void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer) {
+  rlmPipeline->bindCommandBuffer(commandBuffer);
+  vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 }
 
 void SimpleRenderSystem::createPipelineLayout() {

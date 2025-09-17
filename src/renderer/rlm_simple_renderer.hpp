@@ -14,6 +14,7 @@ class SimpleRenderSystem {
 
   SimpleRenderSystem(const SimpleRenderSystem &) = delete;
   SimpleRenderSystem &operator=(const SimpleRenderSystem &) = delete;
+  void renderGameObjects(VkCommandBuffer commandBuffer);
 
  private:
   void createPipeline(VkRenderPass renderPass);

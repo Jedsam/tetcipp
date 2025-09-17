@@ -1,6 +1,8 @@
 
 #include <spdlog/spdlog.h>
+#include <vulkan/vulkan_core.h>
 
+#include <cstdint>
 #include <memory>
 
 #include "rlm_device.hpp"
@@ -15,9 +17,15 @@ RLMRenderer::RLMRenderer(RLMWindow &rlmWindow, RLMDevice &rlmDevice)
   recreateSwapChain();
   createCommandBuffer();
   spdlog::debug("RLMRenderer: Command buffer allocated\n");
+  createSyncObjects();
+  spdlog::debug("RLMRenderer: Sync Objects created\n");
 }
 
-RLMRenderer::~RLMRenderer() {}
+RLMRenderer::~RLMRenderer() {
+  vkDestroySemaphore(rlmDevice.getDevice(), imageAvailableSemaphore, nullptr);
+  vkDestroySemaphore(rlmDevice.getDevice(), renderFinishedSemaphore, nullptr);
+  vkDestroyFence(rlmDevice.getDevice(), inFlightFence, nullptr);
+}
 
 void RLMRenderer::recreateSwapChain() {
   auto extent = rlmWindow.getExtent();
@@ -26,6 +34,24 @@ void RLMRenderer::recreateSwapChain() {
     glfwWaitEvents();
   }
   rlmSwapChain = std::make_unique<RLMSwapChain>(rlmDevice, extent);
+}
+
+void RLMRenderer::createSyncObjects() {
+  VkSemaphoreCreateInfo semaphoreInfo{};
+  // In future might need to fill out semaphoreInfo
+  semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+  // Same for fenceInfo except create it to be signaled so for the first frame we are not stuck
+  VkFenceCreateInfo fenceInfo{};
+  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+  auto result1 = vkCreateSemaphore(rlmDevice.getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphore);
+  auto result2 = vkCreateSemaphore(rlmDevice.getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphore);
+  auto result3 = vkCreateFence(rlmDevice.getDevice(), &fenceInfo, nullptr, &inFlightFence);
+  if (result1 != VK_SUCCESS || result2 != VK_SUCCESS || result3 != VK_SUCCESS) {
+    throw std::runtime_error("failed to create semaphores!");
+  }
 }
 
 void RLMRenderer::beginRenderPass() {
@@ -69,6 +95,31 @@ void RLMRenderer::beginRenderPass() {
 void RLMRenderer::endRenderPass() { vkCmdEndRenderPass(commandBuffer); }
 
 void RLMRenderer::beginFrame() {
+  // The vkWaitForFences function takes an array of fences and waits on the host for either any or all of the
+  // fences to be signaled before returning. The VK_TRUE we pass here indicates that we want to wait for all
+  // fences, but in the case of a single one it doesn't matter. This function also has a timeout parameter
+  // that we set to the maximum value of a 64 bit unsigned integer, UINT64_MAX, which effectively disables the
+  // timeout.
+  vkWaitForFences(rlmDevice.getDevice(), 1, &inFlightFence, VK_TRUE, UINT64_MAX);
+
+  // The first two parameters of vkAcquireNextImageKHR are the logical device and the swap chain from which we
+  // wish to acquire an image. The third parameter specifies a timeout in nanoseconds for an image to become
+  // available. Using the maximum value of a 64 bit unsigned integer means we effectively disable the timeout.
+  vkAcquireNextImageKHR(
+      rlmDevice.getDevice(),
+      rlmSwapChain->getSwapChain(),
+      UINT64_MAX,
+      imageAvailableSemaphore,
+      VK_NULL_HANDLE,
+      &currentImageIndex);
+
+  vkResetFences(rlmDevice.getDevice(), 1, &inFlightFence);
+
+  vkResetCommandBuffer(commandBuffer, 0);
+  recordCommandBuffer(commandBuffer, currentImageIndex);
+}
+
+void RLMRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
   // The flags parameter specifies how we're going to use the command buffer. The following values are
   // available:
   //
@@ -78,7 +129,6 @@ void RLMRenderer::beginFrame() {
   // be entirely within a single render pass.
   // -VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT: The command
   // buffer can be resubmitted while it is also already pending execution.
-
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   beginInfo.flags = 0;  // Optional
@@ -96,6 +146,48 @@ void RLMRenderer::endFrame() {
   auto result = vkEndCommandBuffer(commandBuffer);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to record command buffer!");
+  }
+  VkSubmitInfo submitInfo{};
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+  VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
+  VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+  submitInfo.waitSemaphoreCount = 1;
+  submitInfo.pWaitSemaphores = waitSemaphores;
+  submitInfo.pWaitDstStageMask = waitStages;
+
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = &commandBuffer;
+
+  VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
+  submitInfo.signalSemaphoreCount = 1;
+  submitInfo.pSignalSemaphores = signalSemaphores;
+
+  result = vkQueueSubmit(rlmDevice.getGraphicsQueue(), 1, &submitInfo, inFlightFence);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("failed to submit draw command buffer!");
+  }
+
+  VkPresentInfoKHR presentInfo{};
+  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  presentInfo.waitSemaphoreCount = 1;
+  presentInfo.pWaitSemaphores = signalSemaphores;
+  // The first two parameters specify which semaphores to wait on before presentation can happen, just like
+  // VkSubmitInfo. Since we want to wait on the command buffer to finish execution,
+
+  VkSwapchainKHR swapChains[] = {rlmSwapChain->getSwapChain()};
+  presentInfo.swapchainCount = 1;
+  presentInfo.pSwapchains = swapChains;
+  presentInfo.pImageIndices = &currentImageIndex;
+
+  presentInfo.pResults = nullptr;  // Optional
+  // There is one last optional parameter called pResults. It allows you to specify an array of VkResult
+  // values to check for every individual swap chain if presentation was successful. It's not necessary if
+  // you're only using a single swap chain, because you can simply use the return value of the present
+  // function.
+  result = vkQueuePresentKHR(rlmDevice.getPresentQueue(), &presentInfo);
+  if (result != VK_SUCCESS) {
+    // throw std::runtime_error("failed to present queue!");
   }
 }
 

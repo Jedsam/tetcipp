@@ -60,9 +60,35 @@ void RLMSwapChain::createFramebuffers() {
       throw std::runtime_error("failed to create framebuffer!");
     }
   }
+  spdlog::debug("RLMSwapChain::createFramebuffers: Number of image views: {}", swapChainImageViews.size());
 }
 
 void RLMSwapChain::createRenderPass() {
+  // There are two built-in dependencies that take care of the transition at the start of the render pass and
+  // at the end of the render pass, but the former does not occur at the right time. It assumes that the
+  // transition occurs at the start of the pipeline, but we haven't acquired the image yet at that point!
+  // So we will add a dependency to make he render pass wait for the
+  // VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT stage
+  //
+  // The first two fields specify the indices of the dependency and the dependent subpass. The special value
+  // VK_SUBPASS_EXTERNAL refers to the implicit subpass before or after the render pass depending on whether
+  // it is specified in srcSubpass or dstSubpass. The index 0 refers to our subpass, which is the first and
+  // only one. The dstSubpass must always be higher than srcSubpass to prevent cycles in the dependency graph
+  // (unless one of the subpasses is VK_SUBPASS_EXTERNAL).
+  VkSubpassDependency dependency{};
+  dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+  dependency.dstSubpass = 0;
+  // The next two fields specify the operations to wait on and the stages in which these operations occur. We
+  // need to wait for the swap chain to finish reading from the image before we can access it. This can be
+  // accomplished by waiting on the color attachment output stage itself.
+  dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependency.srcAccessMask = 0;
+  // The operations that should wait on this are in the color attachment stage and involve the writing of the
+  // color attachment. These settings will prevent the transition from happening until it's actually necessary
+  // (and allowed): when we want to start writing colors to it.
+  dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
   VkAttachmentDescription colorAttachment{};
   // same as swap chain
   colorAttachment.format = swapChainImageFormat;
@@ -125,6 +151,8 @@ void RLMSwapChain::createRenderPass() {
   renderPassInfo.pAttachments = &colorAttachment;
   renderPassInfo.subpassCount = 1;
   renderPassInfo.pSubpasses = &subpass;
+  renderPassInfo.dependencyCount = 1;
+  renderPassInfo.pDependencies = &dependency;
 
   auto result = vkCreateRenderPass(rlmDevice.getDevice(), &renderPassInfo, nullptr, &renderPass);
   if (result != VK_SUCCESS) {
@@ -159,6 +187,7 @@ void RLMSwapChain::createImageViews() {
       throw std::runtime_error("failed to create image views!");
     }
   }
+  spdlog::debug("RLMSwapChain::createImageViews: Created {} image views", swapChainImageViews.size());
 }
 
 void RLMSwapChain::createSwapChain() {
