@@ -4,12 +4,21 @@
 
 #include <algorithm>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <vector>
 
 #include "rlm_swapchain.hpp"
 
 namespace rlm {
+
+RLMSwapChain::RLMSwapChain(
+    RLMDevice &rlmDevice,
+    VkExtent2D windowExtent,
+    std::shared_ptr<RLMSwapChain> oldSwapChain)
+    : rlmDevice{rlmDevice}, swapChainExtent{windowExtent}, oldSwapChain{oldSwapChain} {
+  init();
+}
 
 RLMSwapChain::RLMSwapChain(RLMDevice &rlmDevice, VkExtent2D windowExtent)
     : rlmDevice{rlmDevice}, swapChainExtent{windowExtent} {
@@ -217,6 +226,7 @@ void RLMSwapChain::createSwapChain() {
   createInfo.imageExtent = extent;
   createInfo.imageArrayLayers = 1;
   createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  createInfo.oldSwapchain = oldSwapChain == nullptr ? VK_NULL_HANDLE : oldSwapChain->swapChain;
 
   QueueFamilyIndices indices = rlmDevice.findPhysicalQueueFamilies();
   uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};

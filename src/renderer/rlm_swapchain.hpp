@@ -1,14 +1,18 @@
 #pragma once
 
-#include "rlm_device.hpp"
 #include <vulkan/vulkan_core.h>
 
+#include <cstdint>
+#include <memory>
 #include <vector>
+
+#include "rlm_device.hpp"
 
 namespace rlm {
 class RLMSwapChain {
  public:
   RLMSwapChain(RLMDevice &rlmDevice, VkExtent2D windowExtent);
+  RLMSwapChain(RLMDevice &rlmDevice, VkExtent2D windowExtent, std::shared_ptr<RLMSwapChain> oldSwapChain);
   ~RLMSwapChain();
 
   VkRenderPass getRenderPass() { return renderPass; }
@@ -18,6 +22,8 @@ class RLMSwapChain {
   VkExtent2D getExtent() { return swapChainExtent; }
 
   VkSwapchainKHR getSwapChain() { return swapChain; }
+
+  uint32_t getSwapChainImageCount() { return swapChainImages.size(); }
 
  private:
   VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &availableFormats);
@@ -35,6 +41,8 @@ class RLMSwapChain {
   std::vector<VkImage> swapChainImages;
   std::vector<VkImageView> swapChainImageViews;
   std::vector<VkFramebuffer> swapChainFramebuffers;
+
+  std::shared_ptr<RLMSwapChain> oldSwapChain;
 
   VkRenderPass renderPass;
   VkSwapchainKHR swapChain;

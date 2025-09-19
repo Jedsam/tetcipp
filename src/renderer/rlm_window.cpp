@@ -23,5 +23,14 @@ void RLMWindow::initWindow() {
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
   window = glfwCreateWindow(height, width, windowName.c_str(), nullptr, nullptr);
+  glfwSetWindowUserPointer(window, this);
+  glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+}
+
+void RLMWindow::framebufferResizeCallback(GLFWwindow *window, int width, int height) {
+  auto rlmWindow = reinterpret_cast<RLMWindow *>(glfwGetWindowUserPointer(window));
+  rlmWindow->framebufferResized = true;
+  rlmWindow->width = width;
+  rlmWindow->height = height;
 }
 }  // namespace rlm

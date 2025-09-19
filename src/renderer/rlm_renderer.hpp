@@ -29,7 +29,7 @@ class RLMRenderer {
  private:
   RLMDevice &rlmDevice;
   RLMWindow &rlmWindow;
-  std::unique_ptr<RLMSwapChain> rlmSwapChain;
+  std::shared_ptr<RLMSwapChain> rlmSwapChain;
 
   std::vector<VkCommandBuffer> commandBuffers;
 
@@ -44,6 +44,7 @@ class RLMRenderer {
 
   std::vector<VkSemaphore> imageAvailableSemaphores;
   std::vector<VkSemaphore> renderFinishedSemaphores;
+  std::vector<VkSemaphore> submitSempahores;
   std::vector<VkFence> inFlightFences;
 };
 }  // namespace rlm

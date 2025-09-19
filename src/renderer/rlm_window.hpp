@@ -18,11 +18,19 @@ class RLMWindow {
 
   VkExtent2D getExtent() { return {static_cast<uint32_t>(width), static_cast<uint32_t>(height)}; }
 
+  bool wasWindowResized() { return framebufferResized; }
+
+  void resetWindowResizedFlag() { framebufferResized = false; }
+
  private:
+  static void framebufferResizeCallback(GLFWwindow *window, int width, int height);
+
   void initWindow();
   int height;
   int width;
   std::string windowName;
+
+  bool framebufferResized = false;
 
   GLFWwindow *window;
 };
