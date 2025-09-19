@@ -15,16 +15,18 @@ namespace rlm {
 RLMRenderer::RLMRenderer(RLMWindow &rlmWindow, RLMDevice &rlmDevice)
     : rlmWindow(rlmWindow), rlmDevice(rlmDevice) {
   recreateSwapChain();
-  createCommandBuffer();
+  createCommandBuffers();
   spdlog::debug("RLMRenderer: Command buffer allocated\n");
   createSyncObjects();
   spdlog::debug("RLMRenderer: Sync Objects created\n");
 }
 
 RLMRenderer::~RLMRenderer() {
-  vkDestroySemaphore(rlmDevice.getDevice(), imageAvailableSemaphore, nullptr);
-  vkDestroySemaphore(rlmDevice.getDevice(), renderFinishedSemaphore, nullptr);
-  vkDestroyFence(rlmDevice.getDevice(), inFlightFence, nullptr);
+  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    vkDestroySemaphore(rlmDevice.getDevice(), renderFinishedSemaphores[i], nullptr);
+    vkDestroySemaphore(rlmDevice.getDevice(), imageAvailableSemaphores[i], nullptr);
+    vkDestroyFence(rlmDevice.getDevice(), inFlightFences[i], nullptr);
+  }
 }
 
 void RLMRenderer::recreateSwapChain() {
@@ -37,6 +39,10 @@ void RLMRenderer::recreateSwapChain() {
 }
 
 void RLMRenderer::createSyncObjects() {
+  imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+  renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+  inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
   VkSemaphoreCreateInfo semaphoreInfo{};
   // In future might need to fill out semaphoreInfo
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -46,11 +52,15 @@ void RLMRenderer::createSyncObjects() {
   fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-  auto result1 = vkCreateSemaphore(rlmDevice.getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphore);
-  auto result2 = vkCreateSemaphore(rlmDevice.getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphore);
-  auto result3 = vkCreateFence(rlmDevice.getDevice(), &fenceInfo, nullptr, &inFlightFence);
-  if (result1 != VK_SUCCESS || result2 != VK_SUCCESS || result3 != VK_SUCCESS) {
-    throw std::runtime_error("failed to create semaphores!");
+  for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    auto result1 =
+        vkCreateSemaphore(rlmDevice.getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]);
+    auto result2 =
+        vkCreateSemaphore(rlmDevice.getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]);
+    auto result3 = vkCreateFence(rlmDevice.getDevice(), &fenceInfo, nullptr, &inFlightFences[i]);
+    if (result1 != VK_SUCCESS || result2 != VK_SUCCESS || result3 != VK_SUCCESS) {
+      throw std::runtime_error("failed to create semaphores!");
+    }
   }
 }
 
@@ -76,7 +86,7 @@ void RLMRenderer::beginRenderPass() {
   // itself and no secondary command buffers will be executed.
   // -VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS: The render pass commands will be executed from secondary
   // command buffers.
-  vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBeginRenderPass(commandBuffers[currentFrame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   VkViewport viewport{};
   viewport.x = 0.0f;
   viewport.y = 0.0f;
@@ -84,15 +94,15 @@ void RLMRenderer::beginRenderPass() {
   viewport.height = static_cast<float>(swapChainExtent.height);
   viewport.minDepth = 0.0f;
   viewport.maxDepth = 1.0f;
-  vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+  vkCmdSetViewport(commandBuffers[currentFrame], 0, 1, &viewport);
 
   VkRect2D scissor{};
   scissor.offset = {0, 0};
   scissor.extent = swapChainExtent;
-  vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+  vkCmdSetScissor(commandBuffers[currentFrame], 0, 1, &scissor);
 }
 
-void RLMRenderer::endRenderPass() { vkCmdEndRenderPass(commandBuffer); }
+void RLMRenderer::endRenderPass() { vkCmdEndRenderPass(commandBuffers[currentFrame]); }
 
 void RLMRenderer::beginFrame() {
   // The vkWaitForFences function takes an array of fences and waits on the host for either any or all of the
@@ -100,7 +110,9 @@ void RLMRenderer::beginFrame() {
   // fences, but in the case of a single one it doesn't matter. This function also has a timeout parameter
   // that we set to the maximum value of a 64 bit unsigned integer, UINT64_MAX, which effectively disables the
   // timeout.
-  vkWaitForFences(rlmDevice.getDevice(), 1, &inFlightFence, VK_TRUE, UINT64_MAX);
+  vkWaitForFences(rlmDevice.getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+
+  vkResetFences(rlmDevice.getDevice(), 1, &inFlightFences[currentFrame]);
 
   // The first two parameters of vkAcquireNextImageKHR are the logical device and the swap chain from which we
   // wish to acquire an image. The third parameter specifies a timeout in nanoseconds for an image to become
@@ -109,14 +121,12 @@ void RLMRenderer::beginFrame() {
       rlmDevice.getDevice(),
       rlmSwapChain->getSwapChain(),
       UINT64_MAX,
-      imageAvailableSemaphore,
+      imageAvailableSemaphores[currentFrame],
       VK_NULL_HANDLE,
       &currentImageIndex);
 
-  vkResetFences(rlmDevice.getDevice(), 1, &inFlightFence);
-
-  vkResetCommandBuffer(commandBuffer, 0);
-  recordCommandBuffer(commandBuffer, currentImageIndex);
+  vkResetCommandBuffer(commandBuffers[currentFrame], 0);
+  recordCommandBuffer(commandBuffers[currentFrame], currentImageIndex);
 }
 
 void RLMRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
@@ -143,27 +153,27 @@ void RLMRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t im
 }
 
 void RLMRenderer::endFrame() {
-  auto result = vkEndCommandBuffer(commandBuffer);
+  auto result = vkEndCommandBuffer(commandBuffers[currentFrame]);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to record command buffer!");
   }
   VkSubmitInfo submitInfo{};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-  VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
+  VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
   VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
   submitInfo.waitSemaphoreCount = 1;
   submitInfo.pWaitSemaphores = waitSemaphores;
   submitInfo.pWaitDstStageMask = waitStages;
 
   submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &commandBuffer;
+  submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
-  VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
+  VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores = signalSemaphores;
 
-  result = vkQueueSubmit(rlmDevice.getGraphicsQueue(), 1, &submitInfo, inFlightFence);
+  result = vkQueueSubmit(rlmDevice.getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to submit draw command buffer!");
   }
@@ -189,9 +199,12 @@ void RLMRenderer::endFrame() {
   if (result != VK_SUCCESS) {
     // throw std::runtime_error("failed to present queue!");
   }
+
+  currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void RLMRenderer::createCommandBuffer() {
+void RLMRenderer::createCommandBuffers() {
+  commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
   // The level parameter specifies if the allocated command buffers are primary or secondary command buffers.
 
   // -VK_COMMAND_BUFFER_LEVEL_PRIMARY: Can be submitted to a queue for execution, but cannot be called from
@@ -202,9 +215,9 @@ void RLMRenderer::createCommandBuffer() {
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.commandPool = rlmDevice.getCommandPool();
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandBufferCount = 1;
+  allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 
-  auto result = vkAllocateCommandBuffers(rlmDevice.getDevice(), &allocInfo, &commandBuffer);
+  auto result = vkAllocateCommandBuffers(rlmDevice.getDevice(), &allocInfo, commandBuffers.data());
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to allocate command buffers!");
   }

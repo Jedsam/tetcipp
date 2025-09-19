@@ -1,3 +1,5 @@
+#include <vulkan/vulkan_core.h>
+
 #include <cassert>
 #include <fstream>
 #include <string>

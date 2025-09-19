@@ -1,12 +1,16 @@
 #pragma once
 
-#include <memory>
 #include <vulkan/vulkan_core.h>
+
+#include <memory>
+#include <vector>
 
 #include "rlm_swapchain.hpp"
 #include "rlm_window.hpp"
 
 namespace rlm {
+const int MAX_FRAMES_IN_FLIGHT = 2;
+
 class RLMRenderer {
  public:
   RLMRenderer(RLMWindow &rlmWindow, RLMDevice &rlmDevice);
@@ -20,25 +24,26 @@ class RLMRenderer {
 
   VkRenderPass getRenderPass() { return rlmSwapChain->getRenderPass(); }
 
-  VkCommandBuffer getCommandBuffer() { return commandBuffer; }
+  VkCommandBuffer getCommandBuffer() { return commandBuffers[currentFrame]; }
 
  private:
   RLMDevice &rlmDevice;
   RLMWindow &rlmWindow;
   std::unique_ptr<RLMSwapChain> rlmSwapChain;
 
-  VkCommandBuffer commandBuffer;
+  std::vector<VkCommandBuffer> commandBuffers;
 
-  uint32_t currentImageIndex;
+  uint32_t currentImageIndex = 0;
+  uint32_t currentFrame = 0;
 
   void recreateSwapChain();
-  void createCommandBuffer();
+  void createCommandBuffers();
   void createSyncObjects();
 
   void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
-  VkSemaphore imageAvailableSemaphore;
-  VkSemaphore renderFinishedSemaphore;
-  VkFence inFlightFence;
+  std::vector<VkSemaphore> imageAvailableSemaphores;
+  std::vector<VkSemaphore> renderFinishedSemaphores;
+  std::vector<VkFence> inFlightFences;
 };
 }  // namespace rlm
