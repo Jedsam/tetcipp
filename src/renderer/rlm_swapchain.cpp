@@ -247,8 +247,6 @@ void RLMSwapChain::createSwapChain() {
   createInfo.presentMode = presentMode;
   createInfo.clipped = VK_TRUE;  // False if you want to get access to the pixels behind a window
 
-  createInfo.oldSwapchain = VK_NULL_HANDLE;
-
   auto result = vkCreateSwapchainKHR(rlmDevice.getDevice(), &createInfo, nullptr, &swapChain);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to create swap chain!");

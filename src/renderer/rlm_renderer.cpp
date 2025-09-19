@@ -38,6 +38,7 @@ void RLMRenderer::recreateSwapChain() {
     extent = rlmWindow.getExtent();
     glfwWaitEvents();
   }
+  vkDeviceWaitIdle(rlmDevice.getDevice());
   rlmSwapChain = std::make_unique<RLMSwapChain>(rlmDevice, extent, rlmSwapChain);
 }
 
