@@ -12,6 +12,7 @@
 // #include <glm/gtc/constants.hpp>
 // #include <glm/common.hpp>
 
+#include "renderer/rlm_model.hpp"
 #include "renderer/rlm_pipeline.hpp"
 #include "rlm_simple_renderer.hpp"
 
@@ -27,12 +28,19 @@ SimpleRenderSystem::SimpleRenderSystem(RLMDevice &device, VkRenderPass renderPas
 }
 
 void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
+  assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
   PipelineConfigInfo pipelineConfigInfo{};
   RLMPipeline::defaultPipelineConfigInfo(pipelineConfigInfo);
   pipelineConfigInfo.renderPass = renderPass;
   pipelineConfigInfo.pipelineLayout = pipelineLayout;
+  auto bindingDescription = RLMModel::Vertex::getBindingDescriptions();
+  auto attributeDescriptions = RLMModel::Vertex::getAttributeDescriptions();
+
   rlmPipeline = std::make_unique<RLMPipeline>(
       rlmDevice, "shaders/shader.vert.spv", "shaders/shader.frag.spv", pipelineConfigInfo);
+  if (rlmPipeline == nullptr) {
+    throw std::runtime_error("RLMPipeline creation was unsuccessful");
+  }
 }
 
 void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer) {

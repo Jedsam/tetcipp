@@ -1,4 +1,3 @@
-#include "renderer/rlm_simple_renderer.hpp"
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -7,6 +6,7 @@
 #include <chrono>
 #include <memory>
 
+#include "renderer/rlm_simple_renderer.hpp"
 #include "rlm_tetcipp_app.hpp"
 
 namespace rlm {
