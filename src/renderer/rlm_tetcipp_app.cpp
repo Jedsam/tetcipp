@@ -5,7 +5,9 @@
 #include <cassert>
 #include <chrono>
 #include <memory>
+#include <vector>
 
+#include "renderer/rlm_model.hpp"
 #include "renderer/rlm_simple_renderer.hpp"
 #include "rlm_tetcipp_app.hpp"
 
@@ -43,6 +45,14 @@ void RLMApplication::mainLoop() {
 
   auto currentTime = std::chrono::high_resolution_clock::now();
 
+  const std::vector<RLMModel::Vertex> vertices = {
+      {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+      {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+      {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
+  RLMModel::Builder modelBuilder{};
+  modelBuilder.vertices = vertices;
+  RLMModel tempModel{*rlmDevice, modelBuilder};
+
   while (!rlmWindow->shouldClose()) {
     auto newTime = std::chrono::high_resolution_clock::now();
     float frameTime =
@@ -52,7 +62,7 @@ void RLMApplication::mainLoop() {
     rlmRenderer->beginFrame();
     rlmRenderer->beginRenderPass();
 
-    simpleRenderSystem.renderGameObjects(rlmRenderer->getCommandBuffer());
+    simpleRenderSystem.renderGameObjects(rlmRenderer->getCommandBuffer(), tempModel);
     // record stuff
     rlmRenderer->endRenderPass();
     rlmRenderer->endFrame();

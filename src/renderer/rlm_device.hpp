@@ -38,13 +38,22 @@ class RLMDevice {
 
   VkDevice getDevice() { return device; }
 
-  VkPhysicalDevice getPhyiscalDevice() { return physicalDevice; }
+  VkPhysicalDevice getPhysicalDevice() { return physicalDevice; }
 
   VkCommandPool getCommandPool() { return commandPool; }
 
   VkQueue getGraphicsQueue() { return graphicsQueue; }
 
   VkQueue getPresentQueue() { return presentQueue; }
+
+  uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+  void createBuffer(
+      VkDeviceSize size,
+      VkBufferUsageFlags usage,
+      VkMemoryPropertyFlags properties,
+      VkBuffer &buffer,
+      VkDeviceMemory &bufferMemory);
 
   explicit RLMDevice(RLMWindow &window);
   ~RLMDevice();

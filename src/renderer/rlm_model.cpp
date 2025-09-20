@@ -1,11 +1,46 @@
 #include <vulkan/vulkan_core.h>
 
 #include <cstddef>
+#include <memory>
+#include <stdexcept>
 #include <vector>
 
+#include "renderer/rlm_buffer.hpp"
 #include "renderer/rlm_model.hpp"
 
 namespace rlm {
+
+RLMModel::RLMModel(RLMDevice &rlmDevice, const RLMModel::Builder &builder) : rlmDevice{rlmDevice} {
+  createVertexBuffer(builder.vertices);
+}
+
+RLMModel::~RLMModel() {}
+
+void RLMModel::createVertexBuffer(const std::vector<Vertex> &vertices) {
+  vertexCount = static_cast<uint32_t>(vertices.size());
+  assert(vertexCount >= 3 && "Vertex count must be at least 3");
+  VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
+  uint32_t vertexSize = sizeof(vertices[0]);
+
+  vertexBuffer = std::make_unique<RLMBuffer>(
+      rlmDevice,
+      bufferSize,
+      vertexCount,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO);
+
+  vertexBuffer->mapMemory();
+  vertexBuffer->writeToBuffer(reinterpret_cast<const void *>(vertices.data()));
+}
+
+void RLMModel::createIndexBuffer(const std::vector<uint32_t> &indices) {}
+
+void RLMModel::bind(VkCommandBuffer commandBuffer) {
+  VkBuffer buffers[] = {vertexBuffer->getBuffer()};
+  VkDeviceSize offsets[] = {0};
+  vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
+}
+
 void RLMModel::draw(VkCommandBuffer commandBuffer) {
   // vkCmdDraw has the following parameters, aside from the command buffer:
   //

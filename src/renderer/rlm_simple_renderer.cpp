@@ -43,8 +43,11 @@ void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
   }
 }
 
-void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer) {
+void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, RLMModel &model) {
   rlmPipeline->bindCommandBuffer(commandBuffer);
+
+  model.bind(commandBuffer);
+  model.draw(commandBuffer);
   vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 }
 

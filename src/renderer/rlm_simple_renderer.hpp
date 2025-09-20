@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "renderer/rlm_device.hpp"
+#include "renderer/rlm_model.hpp"
 #include "renderer/rlm_pipeline.hpp"
 
 namespace rlm {
@@ -14,7 +15,7 @@ class SimpleRenderSystem {
 
   SimpleRenderSystem(const SimpleRenderSystem &) = delete;
   SimpleRenderSystem &operator=(const SimpleRenderSystem &) = delete;
-  void renderGameObjects(VkCommandBuffer commandBuffer);
+  void renderGameObjects(VkCommandBuffer commandBuffer, RLMModel &model);
 
  private:
   void createPipeline(VkRenderPass renderPass);

@@ -451,4 +451,59 @@ bool RLMDevice::checkValidationLayerSupport() {
   return true;
 }
 
+void RLMDevice::createBuffer(
+    VkDeviceSize size,
+    VkBufferUsageFlags usage,
+    VkMemoryPropertyFlags properties,
+    VkBuffer &vertexBuffer,
+    VkDeviceMemory &vertexBufferMemory) {
+  VkBufferCreateInfo bufferInfo{};
+  bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bufferInfo.size = size;
+  bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  if (vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create vertex buffer!");
+  }
+
+  // The VkMemoryRequirements struct has three fields:
+  //
+  // size: The size of the required amount of memory in bytes, may differ from bufferInfo.size.
+  // alignment: The offset in bytes where the buffer begins in the allocated region of memory, depends on
+  // bufferInfo.usage and bufferInfo.flags. memoryTypeBits: Bit field of the memory types that are suitable
+  // for the buffer.
+  VkMemoryRequirements memRequirements;
+  vkGetBufferMemoryRequirements(device, vertexBuffer, &memRequirements);
+
+  VkMemoryAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.allocationSize = memRequirements.size;
+  allocInfo.memoryTypeIndex = findMemoryType(
+      memRequirements.memoryTypeBits,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+  auto result = vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemory);
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("failed to allocate vertex buffer memory!");
+  }
+
+  // The first three parameters are self-explanatory and the fourth parameter is the offset within the region
+  // of memory. Since this memory is allocated specifically for this the vertex buffer, the offset is simply
+  // 0. If the offset is non-zero, then it is required to be divisible by memRequirements.alignment.
+  vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+}
+
+uint32_t RLMDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+  VkPhysicalDeviceMemoryProperties memProperties;
+  vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+  for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+    if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+      return i;
+    }
+  }
+
+  throw std::runtime_error("failed to find suitable memory type!");
+}
+
 }  // namespace rlm
