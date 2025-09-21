@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <stdexcept>
 #include <vector>
 
 #include "renderer/rlm_buffer.hpp"
@@ -22,15 +21,29 @@ void RLMModel::createVertexBuffer(const std::vector<Vertex> &vertices) {
   VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
   uint32_t vertexSize = sizeof(vertices[0]);
 
+  //  buffer usage flags:
+  //
+  // VK_BUFFER_USAGE_TRANSFER_SRC_BIT: Buffer can be used as source in a memory transfer operation.
+  // VK_BUFFER_USAGE_TRANSFER_DST_BIT: Buffer can be used as destination in a memory transfer operation.
+
+  RLMBuffer stagingBuffer{
+      rlmDevice,
+      vertexSize,
+      vertexCount,
+      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
+
+  stagingBuffer.mapMemory();
+  stagingBuffer.writeToBuffer(reinterpret_cast<const void *>(vertices.data()));
+
   vertexBuffer = std::make_unique<RLMBuffer>(
       rlmDevice,
-      bufferSize,
+      vertexSize,
       vertexCount,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-      VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO);
+      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-  vertexBuffer->mapMemory();
-  vertexBuffer->writeToBuffer(reinterpret_cast<const void *>(vertices.data()));
+  rlmDevice.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
 }
 
 void RLMModel::createIndexBuffer(const std::vector<uint32_t> &indices) {}
@@ -51,18 +64,21 @@ void RLMModel::draw(VkCommandBuffer commandBuffer) {
   vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 }
 
-VkVertexInputBindingDescription RLMModel::Vertex::getBindingDescriptions() {
-  VkVertexInputBindingDescription bindingDescription{};
-  // The binding parameter specifies the index of the binding in the array of bindings. The stride parameter
-  // specifies the number of bytes from one entry to the next, and the inputRate parameter can have one of the
-  // following values:
-  bindingDescription.binding = 0;
-  bindingDescription.stride = sizeof(Vertex);
-  // VK_VERTEX_INPUT_RATE_VERTEX: Move to the next data entry after each vertex
-  // VK_VERTEX_INPUT_RATE_INSTANCE: Move to the next data entry after each instance
-  bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+std::vector<VkVertexInputBindingDescription> RLMModel::Vertex::getBindingDescriptions() {
+  std::vector<VkVertexInputBindingDescription> bindingDescriptions{
+      {
+          // The binding parameter specifies the index of the binding in the array of bindings. The stride
+          // parameter specifies the number of bytes from one entry to the next, and the inputRate parameter
+          // can have one of the following values:
+          .binding = 0,
+          .stride = sizeof(Vertex),
+          // VK_VERTEX_INPUT_RATE_VERTEX: Move to the next data entry after each vertex
+          // VK_VERTEX_INPUT_RATE_INSTANCE: Move to the next data entry after each instance
+          .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+      },
+  };
 
-  return bindingDescription;
+  return bindingDescriptions;
 }
 
 std::vector<VkVertexInputAttributeDescription> RLMModel::Vertex::getAttributeDescriptions() {

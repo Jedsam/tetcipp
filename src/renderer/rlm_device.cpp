@@ -455,15 +455,15 @@ void RLMDevice::createBuffer(
     VkDeviceSize size,
     VkBufferUsageFlags usage,
     VkMemoryPropertyFlags properties,
-    VkBuffer &vertexBuffer,
-    VkDeviceMemory &vertexBufferMemory) {
+    VkBuffer &buffer,
+    VkDeviceMemory &bufferMemory) {
   VkBufferCreateInfo bufferInfo{};
   bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   bufferInfo.size = size;
-  bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  bufferInfo.usage = usage;
   bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-  if (vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
+  if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
     throw std::runtime_error("failed to create vertex buffer!");
   }
 
@@ -474,16 +474,14 @@ void RLMDevice::createBuffer(
   // bufferInfo.usage and bufferInfo.flags. memoryTypeBits: Bit field of the memory types that are suitable
   // for the buffer.
   VkMemoryRequirements memRequirements;
-  vkGetBufferMemoryRequirements(device, vertexBuffer, &memRequirements);
+  vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
 
   VkMemoryAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = findMemoryType(
-      memRequirements.memoryTypeBits,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+  allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
 
-  auto result = vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMemory);
+  auto result = vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to allocate vertex buffer memory!");
   }
@@ -491,7 +489,54 @@ void RLMDevice::createBuffer(
   // The first three parameters are self-explanatory and the fourth parameter is the offset within the region
   // of memory. Since this memory is allocated specifically for this the vertex buffer, the offset is simply
   // 0. If the offset is non-zero, then it is required to be divisible by memRequirements.alignment.
-  vkBindBufferMemory(device, vertexBuffer, vertexBufferMemory, 0);
+  vkBindBufferMemory(device, buffer, bufferMemory, 0);
+}
+
+void RLMDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+  // NOTE TO : The implementation may be able to apply memory allocation optimizations.
+  // VK_COMMAND_POOL_CREATE_TRANSIENT_BIT flag should be used during command pool generation in that case.
+  VkCommandBuffer commandBuffer = beginSingleTimeCommand();
+
+  VkBufferCopy copyRegion{};
+  copyRegion.srcOffset = 0;  // Optional
+  copyRegion.dstOffset = 0;  // Optional
+  copyRegion.size = size;
+  vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+  endSingleTimeCommand(commandBuffer);
+}
+
+VkCommandBuffer RLMDevice::beginSingleTimeCommand() {
+  VkCommandBufferAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandPool = commandPool;
+  allocInfo.commandBufferCount = 1;
+
+  VkCommandBuffer commandBuffer;
+  vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+
+  VkCommandBufferBeginInfo beginInfo{};
+  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+  vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+  return commandBuffer;
+}
+
+void RLMDevice::endSingleTimeCommand(VkCommandBuffer commandBuffer) {
+  vkEndCommandBuffer(commandBuffer);
+
+  VkSubmitInfo submitInfo{};
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = &commandBuffer;
+
+  vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+  vkQueueWaitIdle(graphicsQueue);
+
+  vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 }
 
 uint32_t RLMDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {

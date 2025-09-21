@@ -19,7 +19,7 @@ class RLMModel {
     glm::vec2 pos;
     glm::vec3 color;
 
-    static VkVertexInputBindingDescription getBindingDescriptions();
+    static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
     static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
   };
 

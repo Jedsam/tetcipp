@@ -33,8 +33,8 @@ void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
   RLMPipeline::defaultPipelineConfigInfo(pipelineConfigInfo);
   pipelineConfigInfo.renderPass = renderPass;
   pipelineConfigInfo.pipelineLayout = pipelineLayout;
-  auto bindingDescription = RLMModel::Vertex::getBindingDescriptions();
-  auto attributeDescriptions = RLMModel::Vertex::getAttributeDescriptions();
+  pipelineConfigInfo.bindingDescription = RLMModel::Vertex::getBindingDescriptions();
+  pipelineConfigInfo.attributeDescription = RLMModel::Vertex::getAttributeDescriptions();
 
   rlmPipeline = std::make_unique<RLMPipeline>(
       rlmDevice, "shaders/shader.vert.spv", "shaders/shader.frag.spv", pipelineConfigInfo);
@@ -48,7 +48,6 @@ void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, RLMMod
 
   model.bind(commandBuffer);
   model.draw(commandBuffer);
-  vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 }
 
 void SimpleRenderSystem::createPipelineLayout() {

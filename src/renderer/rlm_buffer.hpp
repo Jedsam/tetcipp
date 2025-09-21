@@ -1,7 +1,8 @@
 #pragma once
 
-#include "renderer/rlm_device.hpp"
 #include <vulkan/vulkan_core.h>
+
+#include "renderer/rlm_device.hpp"
 
 namespace rlm {
 
@@ -9,7 +10,7 @@ class RLMBuffer {
  public:
   RLMBuffer(
       RLMDevice &rlmDevice,
-      VkDeviceSize instanceSize,
+      VkDeviceSize bufferSize,
       uint32_t instanceCount,
       VkBufferUsageFlags usageFlags,
       VkMemoryPropertyFlags memoryPropertyFlags,
@@ -27,12 +28,10 @@ class RLMBuffer {
   RLMDevice &rlmDevice;
   void *mappedData = nullptr;
   VkBuffer buffer = VK_NULL_HANDLE;
-  VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
+  VkDeviceMemory bufferMemory = VK_NULL_HANDLE;
 
   VkDeviceSize bufferSize;
   uint32_t instanceCount;
-  VkDeviceSize instanceSize;
-  VkDeviceSize alignmentSize;
   VkBufferUsageFlags usageFlags;
   VkMemoryPropertyFlags memoryPropertyFlags;
 };
