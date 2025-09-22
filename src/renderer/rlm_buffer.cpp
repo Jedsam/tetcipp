@@ -8,15 +8,14 @@
 namespace rlm {
 RLMBuffer::RLMBuffer(
     RLMDevice &rlmDevice,
-    VkDeviceSize bufferSize,
+    VkDeviceSize instanceSize,
     uint32_t instanceCount,
     VkBufferUsageFlags usageFlags,
     VkMemoryPropertyFlags memoryPropertyFlags,
     VkDeviceSize minOffsetAlignment)
-    : rlmDevice{rlmDevice}, bufferSize{bufferSize}, instanceCount{instanceCount}, usageFlags{usageFlags},
-      memoryPropertyFlags{memoryPropertyFlags} {
+    : rlmDevice{rlmDevice}, bufferSize{instanceSize * instanceCount}, instanceCount{instanceCount},
+      usageFlags{usageFlags}, memoryPropertyFlags{memoryPropertyFlags} {
   // alignmentSize = getAlignment(instanceSize, minOffsetAlignment);
-  // bufferSize = alignmentSize * instanceCount;
 
   rlmDevice.createBuffer(bufferSize, usageFlags, memoryPropertyFlags, buffer, bufferMemory);
 }

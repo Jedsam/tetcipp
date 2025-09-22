@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "rlm_model.hpp"
 #include "rlm_pipeline.hpp"
 
 #ifndef ENGINE_DIR
@@ -83,12 +84,22 @@ void RLMPipeline::createGraphicsPipeline(
   // fragShaderStageInfo.pSpecializationInfo;
   VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
+  auto &bindingDescriptons = configInfo.bindingDescription;
+  auto &attributeDescriptons = configInfo.attributeDescription;
+  VkPipelineVertexInputStateCreateInfo vertexInputInfo{
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+      .vertexBindingDescriptionCount = static_cast<u_int32_t>(bindingDescriptons.size()),
+      .pVertexBindingDescriptions = bindingDescriptons.data(),
+      .vertexAttributeDescriptionCount = static_cast<u_int32_t>(attributeDescriptons.size()),
+      .pVertexAttributeDescriptions = attributeDescriptons.data(),
+  };
+
   VkGraphicsPipelineCreateInfo pipelineInfo{};
   pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
   pipelineInfo.stageCount = 2;
   pipelineInfo.pStages = shaderStages;
 
-  pipelineInfo.pVertexInputState = &configInfo.vertexInputInfo;
+  pipelineInfo.pVertexInputState = &vertexInputInfo;
   pipelineInfo.pInputAssemblyState = &configInfo.inputAssemblyInfo;
   pipelineInfo.pViewportState = &configInfo.viewportInfo;
   pipelineInfo.pRasterizationState = &configInfo.rasterizationInfo;
@@ -153,16 +164,8 @@ void RLMPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
   configInfo.viewportInfo.viewportCount = 1;
   configInfo.viewportInfo.scissorCount = 1;
 
-  const auto &bindingDescriptons = configInfo.bindingDescription;
-  const auto &attributeDescriptons = configInfo.attributeDescription;
-  VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-  configInfo.vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  configInfo.vertexInputInfo.vertexBindingDescriptionCount =
-      static_cast<u_int32_t>(bindingDescriptons.size()),
-  configInfo.vertexInputInfo.pVertexBindingDescriptions = bindingDescriptons.data(),
-  configInfo.vertexInputInfo.vertexAttributeDescriptionCount =
-      static_cast<u_int32_t>(attributeDescriptons.size()),
-  configInfo.vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptons.data(),
+  configInfo.bindingDescription = RLMModel::Vertex::getBindingDescriptions();
+  configInfo.attributeDescription = RLMModel::Vertex::getAttributeDescriptions();
 
   // Specifieswhat kind of geometry will be drawn from the vertices and if primitive restart should be
   // enabled. The topology member can have values like:
@@ -173,7 +176,7 @@ void RLMPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
   // line -VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST: triangle from every 3 vertices without reuse
   // -VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP: the second and third vertex of every triangle are used as
   // first two vertices of the next triangle
-      configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+  configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
   configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
   configInfo.inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
 

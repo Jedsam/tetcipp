@@ -10,7 +10,7 @@ class RLMBuffer {
  public:
   RLMBuffer(
       RLMDevice &rlmDevice,
-      VkDeviceSize bufferSize,
+      VkDeviceSize instanceSize,
       uint32_t instanceCount,
       VkBufferUsageFlags usageFlags,
       VkMemoryPropertyFlags memoryPropertyFlags,

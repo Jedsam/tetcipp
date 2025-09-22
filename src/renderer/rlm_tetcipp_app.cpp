@@ -46,7 +46,7 @@ void RLMApplication::mainLoop() {
   auto currentTime = std::chrono::high_resolution_clock::now();
 
   const std::vector<RLMModel::Vertex> vertices = {
-      {{0.0f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+      {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
       {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
       {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
   RLMModel::Builder modelBuilder{};
