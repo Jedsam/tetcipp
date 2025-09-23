@@ -1,3 +1,4 @@
+#include <iostream>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -44,6 +45,7 @@ void RLMApplication::mainLoop() {
   SimpleRenderSystem simpleRenderSystem{*rlmDevice, rlmRenderer->getRenderPass()};
 
   auto currentTime = std::chrono::high_resolution_clock::now();
+  auto lastTime = std::chrono::high_resolution_clock::now();
 
   const std::vector<RLMModel::Vertex> vertices = {
       {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -57,11 +59,15 @@ void RLMApplication::mainLoop() {
   modelBuilder.indices = indices;
   RLMModel tempModel{*rlmDevice, modelBuilder};
 
+  int frameCount = 0;
   while (!rlmWindow->shouldClose()) {
     auto newTime = std::chrono::high_resolution_clock::now();
     float frameTime =
         std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
+    float elapsed = std::chrono::duration<float, std::chrono::seconds::period>(newTime - lastTime).count();
     currentTime = newTime;
+
+    frameCount++;
 
     rlmRenderer->beginFrame();
     rlmRenderer->beginRenderPass();
@@ -71,6 +77,14 @@ void RLMApplication::mainLoop() {
     rlmRenderer->endRenderPass();
     rlmRenderer->endFrame();
     glfwPollEvents();
+
+    if (elapsed >= 1.0f) {
+      float fps = frameCount / elapsed;
+      std::cout << "FPS: " << fps << std::endl;
+
+      frameCount = 0;
+      lastTime = currentTime;
+    }
   }
 
   vkDeviceWaitIdle(rlmDevice->getDevice());
