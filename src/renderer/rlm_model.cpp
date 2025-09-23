@@ -48,14 +48,14 @@ void RLMModel::createVertexBuffer(const std::vector<Vertex> &vertices) {
 }
 
 void RLMModel::createIndexBuffer(const std::vector<uint32_t> &indices) {
-  vertexCount = static_cast<uint32_t>(indices.size());
+  indexCount = static_cast<uint32_t>(indices.size());
   hasIndexBuffer = indexCount > 0;
 
   if (!hasIndexBuffer) {
     return;
   }
-  VkDeviceSize bufferSize = sizeof(indices[0]) * vertexCount;
-  uint32_t vertexSize = sizeof(indices[0]);
+  VkDeviceSize bufferSize = sizeof(indices[0]) * indexCount;
+  uint32_t indexSize = sizeof(indices[0]);
 
   //  buffer usage flags:
   //
@@ -64,8 +64,8 @@ void RLMModel::createIndexBuffer(const std::vector<uint32_t> &indices) {
 
   RLMBuffer stagingBuffer{
       rlmDevice,
-      vertexSize,
-      vertexCount,
+      indexSize,
+      indexCount,
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
 
@@ -74,8 +74,8 @@ void RLMModel::createIndexBuffer(const std::vector<uint32_t> &indices) {
 
   indexBuffer = std::make_unique<RLMBuffer>(
       rlmDevice,
-      vertexSize,
-      vertexCount,
+      indexSize,
+      indexCount,
       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -99,7 +99,7 @@ void RLMModel::draw(VkCommandBuffer commandBuffer) {
     // using a value of 1 would cause the graphics card to start reading at the second index. The second to
     // last parameter specifies an offset to add to the indices in the index buffer. The final parameter
     // specifies an offset for instancing, which we're not using.
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indexCount), 1, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);
   } else {
     // vkCmdDraw has the following parameters, aside from the command buffer:
     //
