@@ -44,7 +44,10 @@ class RLMModel {
 
   RLMDevice &rlmDevice;
   std::unique_ptr<RLMBuffer> vertexBuffer;
+  std::unique_ptr<RLMBuffer> indexBuffer;
 
+  bool hasIndexBuffer;
   uint32_t vertexCount;
+  uint32_t indexCount;
 };
 }  // namespace rlm

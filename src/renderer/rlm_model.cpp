@@ -11,6 +11,7 @@ namespace rlm {
 
 RLMModel::RLMModel(RLMDevice &rlmDevice, const RLMModel::Builder &builder) : rlmDevice{rlmDevice} {
   createVertexBuffer(builder.vertices);
+  createIndexBuffer(builder.indices);
 }
 
 RLMModel::~RLMModel() {}
@@ -46,22 +47,68 @@ void RLMModel::createVertexBuffer(const std::vector<Vertex> &vertices) {
   rlmDevice.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
 }
 
-void RLMModel::createIndexBuffer(const std::vector<uint32_t> &indices) {}
+void RLMModel::createIndexBuffer(const std::vector<uint32_t> &indices) {
+  vertexCount = static_cast<uint32_t>(indices.size());
+  hasIndexBuffer = indexCount > 0;
+
+  if (!hasIndexBuffer) {
+    return;
+  }
+  VkDeviceSize bufferSize = sizeof(indices[0]) * vertexCount;
+  uint32_t vertexSize = sizeof(indices[0]);
+
+  //  buffer usage flags:
+  //
+  // VK_BUFFER_USAGE_TRANSFER_SRC_BIT: Buffer can be used as source in a memory transfer operation.
+  // VK_BUFFER_USAGE_TRANSFER_DST_BIT: Buffer can be used as destination in a memory transfer operation.
+
+  RLMBuffer stagingBuffer{
+      rlmDevice,
+      vertexSize,
+      vertexCount,
+      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT};
+
+  stagingBuffer.mapMemory();
+  stagingBuffer.writeToBuffer(reinterpret_cast<const void *>(indices.data()));
+
+  indexBuffer = std::make_unique<RLMBuffer>(
+      rlmDevice,
+      vertexSize,
+      vertexCount,
+      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+  rlmDevice.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
+}
 
 void RLMModel::bind(VkCommandBuffer commandBuffer) {
   VkBuffer buffers[] = {vertexBuffer->getBuffer()};
   VkDeviceSize offsets[] = {0};
   vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
+  if (hasIndexBuffer) {
+    vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+  }
 }
 
 void RLMModel::draw(VkCommandBuffer commandBuffer) {
-  // vkCmdDraw has the following parameters, aside from the command buffer:
-  //
-  // vertexCount: Even though we don't have a vertex buffer, we technically still have 3 vertices to draw.
-  // instanceCount: Used for instanced rendering, use 1 if you're not doing that.
-  // firstVertex: Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
-  // firstInstance: Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
-  vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+  if (hasIndexBuffer) {
+    // The first two parameters specify the number of indices and the number of instances. We're not using
+    // instancing, so just specify 1 instance. The number of indices represents the number of vertices that
+    // will be passed to the vertex shader. The next parameter specifies an offset into the index buffer,
+    // using a value of 1 would cause the graphics card to start reading at the second index. The second to
+    // last parameter specifies an offset to add to the indices in the index buffer. The final parameter
+    // specifies an offset for instancing, which we're not using.
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indexCount), 1, 0, 0, 0);
+  } else {
+    // vkCmdDraw has the following parameters, aside from the command buffer:
+    //
+    // vertexCount: Even though we don't have a vertex buffer, we technically still have 3 vertices to draw.
+    // instanceCount: Used for instanced rendering, use 1 if you're not doing that.
+    // firstVertex: Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
+    // firstInstance: Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
+    vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+  }
 }
 
 std::vector<VkVertexInputBindingDescription> RLMModel::Vertex::getBindingDescriptions() {

@@ -46,11 +46,15 @@ void RLMApplication::mainLoop() {
   auto currentTime = std::chrono::high_resolution_clock::now();
 
   const std::vector<RLMModel::Vertex> vertices = {
-      {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-      {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-      {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
+      {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+      {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+      {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+      {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
+  };
+  const std::vector<uint32_t> indices = {0, 1, 2, 2, 3, 0};
   RLMModel::Builder modelBuilder{};
   modelBuilder.vertices = vertices;
+  modelBuilder.indices = indices;
   RLMModel tempModel{*rlmDevice, modelBuilder};
 
   while (!rlmWindow->shouldClose()) {
