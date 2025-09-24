@@ -1,10 +1,10 @@
-#include <iostream>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include <cassert>
 #include <chrono>
+#include <iostream>
 #include <memory>
 #include <vector>
 
@@ -42,6 +42,7 @@ void RLMApplication::init() {
 }
 
 void RLMApplication::mainLoop() {
+
   SimpleRenderSystem simpleRenderSystem{*rlmDevice, rlmRenderer->getRenderPass()};
 
   auto currentTime = std::chrono::high_resolution_clock::now();
