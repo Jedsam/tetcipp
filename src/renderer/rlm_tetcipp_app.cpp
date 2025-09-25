@@ -9,7 +9,10 @@
 #include <vector>
 
 #include "renderer/rlm_model.hpp"
+#include "renderer/rlm_renderer.hpp"
 #include "renderer/rlm_simple_renderer.hpp"
+#include "rlm_descriptor_set.hpp"
+#include "rlm_descriptor_set_layout.hpp"
 #include "rlm_tetcipp_app.hpp"
 
 namespace rlm {
@@ -42,8 +45,16 @@ void RLMApplication::init() {
 }
 
 void RLMApplication::mainLoop() {
+  auto descriptorSetLayout = RLMDescriptorSetLayout::Builder(*rlmDevice)
+                                 .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+                                 .build();
 
-  SimpleRenderSystem simpleRenderSystem{*rlmDevice, rlmRenderer->getRenderPass()};
+  auto uboSet = RLMDescriptorSet::Builder(*rlmDevice)
+                    .addDescriptorSetLayout(*descriptorSetLayout)
+                    .createBufferMemory(sizeof(UniformBufferObject), RLMRenderer::MAX_FRAMES_IN_FLIGHT)
+                    .build();
+
+  SimpleRenderSystem simpleRenderSystem{*rlmDevice, rlmRenderer->getRenderPass(), *descriptorSetLayout};
 
   auto currentTime = std::chrono::high_resolution_clock::now();
   auto lastTime = std::chrono::high_resolution_clock::now();

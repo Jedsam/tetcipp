@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <memory>
+#include <vector>
 
 // libs
 // #define GLM_FORCE_RADIANS
@@ -22,8 +23,12 @@ SimpleRenderSystem::~SimpleRenderSystem() {
   vkDestroyPipelineLayout(rlmDevice.getDevice(), pipelineLayout, nullptr);
 }
 
-SimpleRenderSystem::SimpleRenderSystem(RLMDevice &device, VkRenderPass renderPass) : rlmDevice{device} {
-  createPipelineLayout();
+SimpleRenderSystem::SimpleRenderSystem(
+    RLMDevice &device,
+    VkRenderPass renderPass,
+    RLMDescriptorSetLayout globalLayout)
+    : rlmDevice{device} {
+  createPipelineLayout(globalLayout);
   createPipeline(renderPass);
 }
 
@@ -50,13 +55,14 @@ void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, RLMMod
   model.draw(commandBuffer);
 }
 
-void SimpleRenderSystem::createPipelineLayout() {
+void SimpleRenderSystem::createPipelineLayout(RLMDescriptorSetLayout globalLayout) {
+  std::vector<VkDescriptorSetLayout> layoutArray{globalLayout.getDescriptorSetLayout()};
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.setLayoutCount = 0;             // Optional
-  pipelineLayoutInfo.pSetLayouts = nullptr;          // Optional
-  pipelineLayoutInfo.pushConstantRangeCount = 0;     // Optional
-  pipelineLayoutInfo.pPushConstantRanges = nullptr;  // Optional
+  pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layoutArray.size());  // Optional
+  pipelineLayoutInfo.pSetLayouts = layoutArray.data();                            // Optional
+  pipelineLayoutInfo.pushConstantRangeCount = 0;                                  // Optional
+  pipelineLayoutInfo.pPushConstantRanges = nullptr;                               // Optional
 
   auto result = vkCreatePipelineLayout(rlmDevice.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
   if (result != VK_SUCCESS) {

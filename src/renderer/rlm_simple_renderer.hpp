@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "renderer/rlm_descriptor_set_layout.hpp"
 #include "renderer/rlm_device.hpp"
 #include "renderer/rlm_model.hpp"
 #include "renderer/rlm_pipeline.hpp"
@@ -10,7 +11,7 @@ namespace rlm {
 
 class SimpleRenderSystem {
  public:
-  explicit SimpleRenderSystem(RLMDevice &device, VkRenderPass renderPass);
+  SimpleRenderSystem(RLMDevice &device, VkRenderPass renderPass, RLMDescriptorSetLayout globalLayout);
   ~SimpleRenderSystem();
 
   SimpleRenderSystem(const SimpleRenderSystem &) = delete;
@@ -19,7 +20,7 @@ class SimpleRenderSystem {
 
  private:
   void createPipeline(VkRenderPass renderPass);
-  void createPipelineLayout();
+  void createPipelineLayout(RLMDescriptorSetLayout globalLayout);
 
   RLMDevice &rlmDevice;
   std::unique_ptr<RLMPipeline> rlmPipeline;

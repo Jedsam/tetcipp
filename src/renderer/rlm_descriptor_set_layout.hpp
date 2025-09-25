@@ -29,6 +29,16 @@ class RLMDescriptorSetLayout {
     std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> setLayoutBindings;
   };
 
+  RLMDescriptorSetLayout(
+      RLMDevice &rlmDevice,
+      std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> setLayoutBindings);
+  ~RLMDescriptorSetLayout();
+
+  VkDescriptorSetLayout getDescriptorSetLayout() { return descriptorSetLayout; }
+
  private:
+  VkDescriptorSetLayout descriptorSetLayout;
+  RLMDevice &rlmDevice;
+  std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> setLayoutBindings;
 };
 }  // namespace rlm

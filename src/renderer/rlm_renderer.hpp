@@ -9,10 +9,10 @@
 #include "rlm_window.hpp"
 
 namespace rlm {
-const int MAX_FRAMES_IN_FLIGHT = 2;
-
 class RLMRenderer {
  public:
+  static const int MAX_FRAMES_IN_FLIGHT = 2;
+
   RLMRenderer(RLMWindow &rlmWindow, RLMDevice &rlmDevice);
   ~RLMRenderer();
 
