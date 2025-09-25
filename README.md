@@ -7,3 +7,4 @@
 * Memory allocation optimized
 * Code optimized for unnecessary stuff in main loop
 * More modular class for time management ?
+* Implement Archetypes
