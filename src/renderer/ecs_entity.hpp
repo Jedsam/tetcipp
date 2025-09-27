@@ -3,29 +3,28 @@
 #include <cstdint>
 
 namespace ecs {
-class Entity {
+using EntityID = uint32_t;
+
+struct Entity {
  public:
-  using id_t = uint32_t;       // 24 bits
-  using genid_t = uint8_t;     // 8 bits
-  using valueid_t = uint32_t;  // 32 bits
+  using physid_t = uint32_t;  // 24 bits physical id
+  using genid_t = uint8_t;    // 8 bits generational id
 
   static const uint32_t GEN_MASK = 0xFF000000;
   static const uint32_t ID_MASK = 0x00FFFFFF;
 
-  Entity() : valueid(0) {}
+  static EntityID createEntity(physid_t id = 0, genid_t gen = 0) {
+    return (static_cast<EntityID>(gen) << 24 | (id & ID_MASK));
+  }
 
-  Entity(id_t id, genid_t gen) : valueid{(static_cast<valueid_t>(gen) << 24) | (id & ID_MASK)} {}
+  static physid_t getId(EntityID entityId) { return entityId & ID_MASK; }
 
-  id_t getId() const { return valueid & ID_MASK; }
+  static genid_t getGen(EntityID entityId) { return entityId >> 24; }
 
-  genid_t getGen() const { return valueid >> 24; }
+  static void setId(EntityID &entityId, physid_t id) { entityId = (entityId & GEN_MASK) | (id & ID_MASK); }
 
-  void setId(id_t id) { valueid = (valueid & GEN_MASK) | (id & ID_MASK); }
-
-  void setGen(genid_t gen) { valueid = (static_cast<valueid_t>(gen) << 24) | (valueid & ID_MASK); }
-
- private:
-  valueid_t valueid = 0;
-  // bool operator==(const RLMEntity &other) const { return id == other.id; }
+  static void setGen(EntityID &entityId, genid_t gen) {
+    entityId = (static_cast<EntityID>(gen) << 24) | (entityId & ID_MASK);
+  }
 };
 }  // namespace ecs
