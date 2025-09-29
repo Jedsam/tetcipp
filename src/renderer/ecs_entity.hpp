@@ -5,7 +5,7 @@
 namespace ecs {
 using EntityID = uint32_t;
 
-struct Entity {
+class Entity {
  public:
   using physid_t = uint32_t;  // 24 bits physical id
   using genid_t = uint8_t;    // 8 bits generational id
@@ -16,6 +16,11 @@ struct Entity {
   static EntityID createEntity(physid_t id = 0, genid_t gen = 0) {
     return (static_cast<EntityID>(gen) << 24 | (id & ID_MASK));
   }
+
+  Entity() = delete;
+  ~Entity() = delete;
+  Entity &operator=(const Entity &) = delete;
+  Entity &operator=(Entity &&) = delete;
 
   static physid_t getId(EntityID entityId) { return entityId & ID_MASK; }
 
