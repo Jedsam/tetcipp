@@ -6,5 +6,5 @@
 * Family queues being seperated
 * Memory allocation optimized
 * Code optimized for unnecessary stuff in main loop
-* More modular class for time management ?
-* Implement Archetypes
+* New more modular class implementation for time management ?
+* Implement Archetypes (using flecs library)
