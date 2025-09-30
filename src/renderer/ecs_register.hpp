@@ -22,7 +22,7 @@ struct Register {
       if (index >= count) {
         return nullptr;
       }
-      return data + index * element_size;
+      return static_cast<char *>(data) + index * element_size;
     }
 
     template <typename Component> Component *at(size_t index) {
@@ -32,39 +32,110 @@ struct Register {
       return &(reinterpret_cast<Component *>(data))[index];
     }
 
-    size_t pushBack(Column &inputColumn, size_t index) {
-      if (count < capacity / 2) {
+    template <typename Component>
+    void pushBack(const Component &component, size_t index) {
+      if (count > capacity / 2) {
         data = reallocarray(data, capacity * 2, element_size);
+        capacity *= 2;
       }
-      memccpy(, const void *__restrict src, int c, size_t n) return -1;
+      std::memcpy(component, at(count), element_size);
+      count++;
+    }
+
+    void pushBack(Column &inputColumn, size_t index) {
+      if (count > capacity / 2) {
+        data = reallocarray(data, capacity * 2, element_size);
+        capacity *= 2;
+      }
+      std::memcpy(inputColumn.at(index), at(count), element_size);
+      count++;
+    }
+
+    void deleteElement(size_t index) {
+      // replace the element with the top value
+      std::memcpy(at(count - 1), at(index), element_size);
+      if (count < capacity / 2) {
+        data = reallocarray(data, capacity / 2, element_size);
+        capacity /= 2;
+      }
+      count--;
     }
 
    private:
-    void *data;
-    size_t element_size;
+    void *data = nullptr;
+    size_t element_size = 0;
 
     size_t count = 0;
-    size_t capacity = 10;
+    size_t capacity = 16;
   };  // namespace ecs
 
   using ComponentId = uint32_t;
   using ArchetypeId = uint32_t;
-  using Type = std::vector<ComponentId>;
+
+  // Basically a sorted vector of component ids
+  struct Type {
+   public:
+    auto begin() { return componentIds.begin(); }
+
+    auto begin() const { return componentIds.begin(); }
+
+    auto end() { return componentIds.end(); }
+
+    auto end() const { return componentIds.end(); }
+
+    Type clone() {
+      Type clonedType;
+      clonedType.componentIds = componentIds;
+      return clonedType;
+    }
+
+    // adds an element to the sorted list using binary searc
+    void add(ComponentId id) {
+      auto it = std::lower_bound(componentIds.begin(), componentIds.end(), id);
+
+      if (it == componentIds.end() || *it != id) {
+        componentIds.insert(it, id);
+      }
+    }
+
+    ComponentId &operator[](size_t index) { return componentIds[index]; }
+
+   private:
+    std::vector<ComponentId> componentIds;
+  };
 
   struct Archetype;
 
   struct ArchetypeEdge {
-    Archetype &add;
-    Archetype &remove;
+    Archetype &edge;  // both add and remove are same
   };
 
   struct Archetype {
+   public:
     // this should be sorted
     Type type;
     // void pointer to be cast to the right value later on, it is the same
     // order as the type variable
-    Column components;
+    std::vector<Column> components;
     std::unordered_map<ComponentId, ArchetypeEdge> edges;
+
+    // Adds a value to the archetype given the archetype the components resides
+    // in, row value of the entity components and the new component to add
+    template <typename Component>
+    void addValue(Archetype oldArchetype, Component component, size_t row) {
+      auto &newComponents = components;
+      auto &newType = type;
+      auto &oldComponents = oldArchetype.components;
+      auto &oldType = oldArchetype.type;
+      for (int i = 0, j = 0; i < newComponents.size(); i++, j++) {
+        if (newType[i] == oldType[i]) {
+          newComponents[i].pushBack(oldComponents[j], row);
+        } else {
+          newComponents[i].pushBack<Component>(component, row);
+          j--;
+        }
+      }
+    }
   };
 
   struct Record {
@@ -80,22 +151,30 @@ struct Register {
   void addComponent(Component component, EntityID entity) {
     Record record = entityIndex[entity];
     auto edgesMap = record.archetype.edges;
-    auto it = edgesMap.find(getComponentId<Component>());
-
+    ComponentId componentId = getComponentId<Component>();
+    auto it = edgesMap.find(componentId);
+    Archetype &oldArchetype = record.archetype;
     if (it != edgesMap.end()) {
-      Archetype &newArchetype = it->add;
-      Column &newComponents = newArchetype.components;
-      Column &oldComponents = record.archetype.components;
-      int i = 0;
-      for (; i < oldComponents.size(); i++) {
-        newComponents[i].pushBack(oldComponents, record.row);
-      }
-      newComponents[i].pushBackM<Component>(component, record.row);
-
-      // Add the new component
-      entityIndex[entity].archetype = result;
+      Archetype &newArchetype = it->second.edge;
     } else {
+      Type newType = oldArchetype.type.clone();
+      newType.add(getComponentId<Component>());
+      auto itArche = archetypeIndex.find(newType);
+      // if it doesnt exist create a new archetype
+      if (itArche == archetypeIndex.end()) {
+        Archetype newArchetype;
+        newArchetype.type = newType;
+        newArchetype.components = newType.initVector();
+        newArchetype.edges[componentId] = oldArchetype;
+      }
     }
+
+    newArchetype.addValue<Component>(record.archetype, component, record.row);
+
+    // update the EntityIndex map
+    entityIndex[entity].archetype = newArchetype;
+    entityIndex[entity].row = newArchetype.components[0].size();
+    // place it inside
   }
 
   template <typename Component>
@@ -152,7 +231,6 @@ struct Register {
   };
 
   std::vector<uint32_t> componentSize;
-  // Types not being sorted might lead to bugs later on
   std::unordered_map<Type, Archetype, TypeHasher> archetypeIndex;
 
   // Find the archetypes for a component
