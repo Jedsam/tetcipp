@@ -1,24 +1,34 @@
 #pragma once
 
-#include "renderer/ecs_id_generator.hpp"
+#include <atomic>
 #include <cstdint>
+#include <vector>
 
 namespace ecs {
+using ComponentID = uint32_t;
+using ArchetypeId = uint32_t;
 
-class IDGenerator {
+class ComponentIDGenerator {
  public:
-  uint32_t nextID() { return current_id.fetch_add(1); }
+  template <typename Component> static uint32_t nextID() {
+    componentSizes[current_id] = sizeof(Component);
+    return current_id.fetch_add(1);
+  }
+
+  template <typename Component> static uint32_t getComponentID() {
+    // C++ guarantees that this line is executed only once, safely,
+    // even if the IDGenerator itself is non-atomic.
+    static const uint32_t componentID = nextID<Component>();
+    return componentID;
+  }
+
+  static size_t getComponentSize(ComponentID componentID) {
+    return componentSizes[componentID];
+  }
 
  private:
-  std::atomic<uint32_t> current_id = 1;
-  std::vector<ComponentId> componentSizes;
+  inline static std::atomic<ComponentID> current_id = 1;
+  inline static std::vector<ComponentID> componentSizes{0, 0};
 };
-
-template <typename C> static uint32_t getComponentID() {
-  // C++ guarantees that this line is executed only once, safely,
-  // even if the IDGenerator itself is non-atomic.
-  static const uint32_t componentId = componentIDGenerator.nextID();
-  return componentId;
-}
 
 }  // namespace ecs

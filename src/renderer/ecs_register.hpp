@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <atomic>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -10,6 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "ecs_component.hpp"
 #include "ecs_entity.hpp"
 
 namespace ecs {
@@ -17,34 +17,11 @@ namespace ecs {
 using ComponentID = uint32_t;
 using ArchetypeId = uint32_t;
 
-class ComponentIDGenerator {
- public:
-  template <typename Component> static uint32_t nextID() {
-    componentSizes[current_id] = sizeof(Component);
-    return current_id.fetch_add(1);
-  }
-
-  template <typename Component> static uint32_t getComponentID() {
-    // C++ guarantees that this line is executed only once, safely,
-    // even if the IDGenerator itself is non-atomic.
-    static const uint32_t componentID = nextID<Component>();
-    return componentID;
-  }
-
-  static size_t getComponentSize(ComponentID componentID) {
-    return componentSizes[componentID];
-  }
-
- private:
-  inline static std::atomic<ComponentID> current_id = 1;
-  static std::vector<ComponentID> componentSizes;
-};
-
 struct Register {
  public:
   struct Column {
    public:
-    explicit Column(size_t element_size) {
+    explicit Column(size_t element_size) : element_size(element_size) {
       data = malloc(capacity * element_size);
     }
 
@@ -68,20 +45,20 @@ struct Register {
 
     template <typename Component>
     void pushBack(const Component &component, size_t index) {
-      if (count > capacity / 2) {
+      if (count >= capacity) {
         data = reallocarray(data, capacity * 2, element_size);
         capacity *= 2;
       }
-      std::memcpy(component, at(count), element_size);
+      std::memcpy(at(count), &component, element_size);
       count++;
     }
 
     void pushBack(Column &inputColumn, size_t index) {
-      if (count > capacity / 2) {
+      if (count >= capacity / 2) {
         data = reallocarray(data, capacity * 2, element_size);
         capacity *= 2;
       }
-      std::memcpy(inputColumn.at(index), at(count), element_size);
+      std::memcpy(at(count), inputColumn.at(index), element_size);
       count++;
     }
 
@@ -90,13 +67,13 @@ struct Register {
       if (count >= capacity) {
         return;
       }
-      std::memcpy(component, at(count), element_size);
+      std::memcpy(at(count), component, element_size);
     }
 
     void deleteElement(size_t index) {
       // replace the element with the top value
-      std::memcpy(at(count - 1), at(index), element_size);
-      if (count < capacity / 2) {
+      std::memcpy(at(index), at(count - 1), element_size);
+      if (count > 16 && count < capacity / 4) {
         data = reallocarray(data, capacity / 2, element_size);
         capacity /= 2;
       }
@@ -131,6 +108,10 @@ struct Register {
       Type clonedType;
       clonedType.componentIDs = componentIDs;
       return clonedType;
+    }
+
+    bool operator==(const Type &other) const {
+      return componentIDs == other.componentIDs;
     }
 
     std::vector<Column> initComponentVector() {
@@ -247,17 +228,14 @@ struct Register {
     } else {
       Type newType = oldArchetype.type.clone();
       newType.add(ComponentIDGenerator::getComponentID<Component>());
-      auto itArche = archetypeIndex.find(newType);
       // if it doesnt exist create a new archetype and insert it to the map
-      if (itArche != archetypeIndex.end()) {
-        newArchetype = &itArche->second;
-      } else {
-        newArchetype = new Archetype();
-        newArchetype->type = newType;
-        newArchetype->components = newType.initComponentVector();
+      auto [itArche, inserted] =
+          archetypeIndex.emplace(std::move(newType), Archetype{});
+      newArchetype = &itArche->second;
+      if (inserted) {
+        newArchetype->type = itArche->first;  // The key Type
+        newArchetype->components = newArchetype->type.initComponentVector();
         newArchetype->edges.emplace(componentID, oldArchetype);
-
-        archetypeIndex[newType] = *newArchetype;
         componentIndex[componentID].emplace(newArchetype);
       }
       oldArchetype.edges.emplace(componentID, newArchetype);
@@ -268,7 +246,7 @@ struct Register {
 
     // update the EntityIndex map
     entityIndex[entity].archetype = *newArchetype;
-    entityIndex[entity].row = newArchetype->components[0].size();
+    entityIndex[entity].row = newArchetype->components[0].size() - 1;
     // place it inside
   }
 
@@ -317,7 +295,7 @@ struct Register {
 
     // update the EntityIndex map
     entityIndex[entity].archetype = *newArchetype;
-    entityIndex[entity].row = newArchetype->components[0].size();
+    entityIndex[entity].row = newArchetype->components[0].size() - 1;
   }
 
   Archetype &findArchetype(EntityID entity) {
