@@ -85,6 +85,14 @@ struct Register {
       count++;
     }
 
+    template <typename Component>
+    void updateElement(const Component &component, size_t index) {
+      if (count >= capacity) {
+        return;
+      }
+      std::memcpy(component, at(count), element_size);
+    }
+
     void deleteElement(size_t index) {
       // replace the element with the top value
       std::memcpy(at(count - 1), at(index), element_size);
@@ -113,6 +121,11 @@ struct Register {
     auto end() { return componentIDs.end(); }
 
     auto end() const { return componentIDs.end(); }
+
+    size_t find(ComponentID id) {
+      auto it = std::lower_bound(componentIDs.begin(), componentIDs.end(), id);
+      return std::distance(componentIDs.begin(), it);
+    }
 
     Type clone() {
       Type clonedType;
@@ -229,7 +242,14 @@ struct Register {
   }
 
   template <typename Component>
-  void updateComponent(Component component, EntityID entity) {}
+  void updateComponent(Component component, EntityID entity) {
+    Record entityRecord = entityIndex[entity];
+    Archetype entityArchetype = entityRecord.archetype;
+    Column componentColumn =
+        entityArchetype.components[entityArchetype.type.find(
+            ComponentIDGenerator::getComponentID<Component>())];
+    componentColumn.updateElement<Component>(component, entityRecord.row);
+  }
 
   template <typename Component> void deleteComponent(EntityID entity);
 
