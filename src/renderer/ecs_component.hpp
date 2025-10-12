@@ -5,7 +5,14 @@
 
 namespace ecs {
 
-static inline IDGenerator componentIDGenerator;
+class IDGenerator {
+ public:
+  uint32_t nextID() { return current_id.fetch_add(1); }
+
+ private:
+  std::atomic<uint32_t> current_id = 1;
+  std::vector<ComponentId> componentSizes;
+};
 
 template <typename C> static uint32_t getComponentID() {
   // C++ guarantees that this line is executed only once, safely,

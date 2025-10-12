@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -12,10 +14,42 @@
 
 namespace ecs {
 
+using ComponentID = uint32_t;
+using ArchetypeId = uint32_t;
+
+class ComponentIDGenerator {
+ public:
+  template <typename Component> static uint32_t nextID() {
+    componentSizes[current_id] = sizeof(Component);
+    return current_id.fetch_add(1);
+  }
+
+  template <typename Component> static uint32_t getComponentID() {
+    // C++ guarantees that this line is executed only once, safely,
+    // even if the IDGenerator itself is non-atomic.
+    static const uint32_t componentID = nextID<Component>();
+    return componentID;
+  }
+
+  static size_t getComponentSize(ComponentID componentID) {
+    return componentSizes[componentID];
+  }
+
+ private:
+  inline static std::atomic<ComponentID> current_id = 1;
+  static std::vector<ComponentID> componentSizes;
+};
+
 struct Register {
  public:
   struct Column {
    public:
+    explicit Column(size_t element_size) {
+      data = malloc(capacity * element_size);
+    }
+
+    ~Column() { free(data); }
+
     size_t size() { return count; }
 
     void *at(size_t index) {
@@ -69,39 +103,48 @@ struct Register {
     size_t capacity = 16;
   };  // namespace ecs
 
-  using ComponentId = uint32_t;
-  using ArchetypeId = uint32_t;
-
   // Basically a sorted vector of component ids
   struct Type {
    public:
-    auto begin() { return componentIds.begin(); }
+    auto begin() { return componentIDs.begin(); }
 
-    auto begin() const { return componentIds.begin(); }
+    auto begin() const { return componentIDs.begin(); }
 
-    auto end() { return componentIds.end(); }
+    auto end() { return componentIDs.end(); }
 
-    auto end() const { return componentIds.end(); }
+    auto end() const { return componentIDs.end(); }
 
     Type clone() {
       Type clonedType;
-      clonedType.componentIds = componentIds;
+      clonedType.componentIDs = componentIDs;
       return clonedType;
     }
 
-    // adds an element to the sorted list using binary searc
-    void add(ComponentId id) {
-      auto it = std::lower_bound(componentIds.begin(), componentIds.end(), id);
+    std::vector<Column> initComponentVector() {
+      std::vector<Column> returnColumn;
+      std::transform(
+          componentIDs.begin(),
+          componentIDs.end(),
+          std::back_inserter(returnColumn),
+          [](auto componentID) {
+            return Column(ComponentIDGenerator::getComponentSize(componentID));
+          });
+      return returnColumn;
+    }
 
-      if (it == componentIds.end() || *it != id) {
-        componentIds.insert(it, id);
+    // adds an element to the sorted list using binary searc
+    void add(ComponentID id) {
+      auto it = std::lower_bound(componentIDs.begin(), componentIDs.end(), id);
+
+      if (it == componentIDs.end() || *it != id) {
+        componentIDs.insert(it, id);
       }
     }
 
-    ComponentId &operator[](size_t index) { return componentIds[index]; }
+    ComponentID &operator[](size_t index) { return componentIDs[index]; }
 
    private:
-    std::vector<ComponentId> componentIds;
+    std::vector<ComponentID> componentIDs;
   };
 
   struct Archetype;
@@ -117,7 +160,7 @@ struct Register {
     // void pointer to be cast to the right value later on, it is the same
     // order as the type variable
     std::vector<Column> components;
-    std::unordered_map<ComponentId, ArchetypeEdge> edges;
+    std::unordered_map<ComponentID, ArchetypeEdge> edges;
 
     // Adds a value to the archetype given the archetype the components resides
     // in, row value of the entity components and the new component to add
@@ -151,29 +194,37 @@ struct Register {
   void addComponent(Component component, EntityID entity) {
     Record record = entityIndex[entity];
     auto edgesMap = record.archetype.edges;
-    ComponentId componentId = getComponentId<Component>();
-    auto it = edgesMap.find(componentId);
+    ComponentID componentID = ComponentIDGenerator::getComponentID<Component>();
+    auto it = edgesMap.find(componentID);
     Archetype &oldArchetype = record.archetype;
+    Archetype *newArchetype;
     if (it != edgesMap.end()) {
-      Archetype &newArchetype = it->second.edge;
+      newArchetype = &it->second.edge;
     } else {
       Type newType = oldArchetype.type.clone();
-      newType.add(getComponentId<Component>());
+      newType.add(ComponentIDGenerator::getComponentID<Component>());
       auto itArche = archetypeIndex.find(newType);
-      // if it doesnt exist create a new archetype
-      if (itArche == archetypeIndex.end()) {
+      // if it doesnt exist create a new archetype and insert it to the map
+      if (itArche != archetypeIndex.end()) {
+        newArchetype = &itArche->second;
+      } else {
         Archetype newArchetype;
         newArchetype.type = newType;
-        newArchetype.components = newType.initVector();
-        newArchetype.edges[componentId] = oldArchetype;
+        newArchetype.components = newType.initComponentVector();
+        newArchetype.edges.emplace(componentID, oldArchetype);
+
+        archetypeIndex[newType] = newArchetype;
+        componentIndex[componentID].emplace(newArchetype);
       }
+      oldArchetype.edges.emplace(componentID, newArchetype);
     }
 
-    newArchetype.addValue<Component>(record.archetype, component, record.row);
+    newArchetype->addValue<Component>(record.archetype, component, record.row);
+    record.archetype = *newArchetype;
 
     // update the EntityIndex map
-    entityIndex[entity].archetype = newArchetype;
-    entityIndex[entity].row = newArchetype.components[0].size();
+    entityIndex[entity].archetype = *newArchetype;
+    entityIndex[entity].row = newArchetype->components[0].size();
     // place it inside
   }
 
@@ -202,11 +253,12 @@ struct Register {
   // For performance reasons its better to put the component likely to have the
   // least amount of members as first parameter
   template <typename C, typename... Components> ArchetypeSet findComponents() {
-    ComponentId componentId = getComponentId<C>();
-    ArchetypeSet resultSet = componentIndex[componentId];
+    ComponentID componentID = ComponentIDGenerator::getComponentID<C>();
+    ArchetypeSet resultSet = componentIndex[componentID];
 
-    ((resultSet =
-          intersect(resultSet, componentIndex[getComponentId<Components>()])),
+    ((resultSet = intersect(
+          resultSet,
+          componentIndex[ComponentIDGenerator::getComponentID<Components>()])),
      ...);
 
     return resultSet;
@@ -224,16 +276,16 @@ struct Register {
           type.begin(),
           type.end(),
           0,
-          [](ComponentId component1, ComponentId component2) {
+          [](ComponentID component1, ComponentID component2) {
             return component1 ^ component2;
           });
     }
   };
 
-  std::vector<uint32_t> componentSize;
   std::unordered_map<Type, Archetype, TypeHasher> archetypeIndex;
 
   // Find the archetypes for a component
-  std::unordered_map<ComponentId, ArchetypeSet> componentIndex;
+  std::unordered_map<ComponentID, ArchetypeSet> componentIndex;
+  ComponentIDGenerator componentIDGenerator;
 };
 }  // namespace ecs
