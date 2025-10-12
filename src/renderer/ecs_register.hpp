@@ -7,6 +7,7 @@
 #include <numeric>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "ecs_component.hpp"
@@ -43,6 +44,20 @@ struct Register {
       return &(reinterpret_cast<Component *>(data))[index];
     }
 
+    void swapWithLastElement(size_t row) {
+      if (count == 0) {
+        return;
+      }
+      count--;
+      std::memcpy(at(row), at(count), element_size);
+
+      if (count > 16 && count < capacity / 4) {
+        data = reallocarray(data, capacity / 2, element_size);
+        capacity /= 2;
+      }
+      count++;
+    }
+
     template <typename Component>
     void pushBack(const Component &component, size_t index) {
       if (count >= capacity) {
@@ -64,10 +79,10 @@ struct Register {
 
     template <typename Component>
     void updateElement(const Component &component, size_t index) {
-      if (count >= capacity) {
+      if (index >= capacity) {
         return;
       }
-      std::memcpy(at(count), component, element_size);
+      std::memcpy(at(index), component, element_size);
     }
 
     void deleteElement(size_t index) {
@@ -166,13 +181,22 @@ struct Register {
     // void pointer to be cast to the right value later on, it is the same
     // order as the type variable
     std::vector<Column> components;
+    // Store the entities list
+    std::vector<EntityID> entities;
     std::unordered_map<ComponentID, ArchetypeEdge> edges;
+
+    void swapWithLastElement(size_t row) {
+      for (int i = 0; i < components.size(); i++) {
+        components[i].swapWithLastElement(row);
+      }
+      entities[row] = entities[entities.size() - 1];
+    }
 
     // Adds a value to the archetype given the archetype the components resides
     // in, row value of the entity components and the new component to add
     template <typename Component>
     void
-    addValue(const Archetype &oldArchetype, Component component, size_t row) {
+    copyValue(const Archetype &oldArchetype, Component component, size_t row) {
       auto &newComponents = components;
       auto &newType = type;
       auto &oldComponents = oldArchetype.components;
@@ -185,12 +209,13 @@ struct Register {
           newComponents[i].pushBack<Component>(component, row);
         }
       }
+      entities.push_back(oldArchetype.entities[row]);
     }
 
     // Adds a value to the archetype given the archetype the components resides
     // in, row value of the entity components and component that was removed
     // from the oldArchetype as a typename
-    void addValue(const Archetype &oldArchetype, size_t row) {
+    void copyValue(const Archetype &oldArchetype, size_t row) {
       auto &newComponents = components;
       auto &newType = type;
       auto &oldComponents = oldArchetype.components;
@@ -205,11 +230,13 @@ struct Register {
   };
 
   struct Record {
-    Archetype &archetype;
+    Archetype *archetype;
     size_t row;
   };
 
-  EntityID createEntity();
+  // TO DO entity creationg and deletion
+  template <typename Component> EntityID createEntity(Component component) {}
+
   void deleteEntity(EntityID entity);
   bool isEntityAlive(EntityID entity);
 
@@ -217,16 +244,17 @@ struct Register {
   // that exist
   template <typename Component>
   void addComponent(Component component, EntityID entity) {
-    Record record = entityIndex[entity];
-    auto edgesMap = record.archetype.edges;
-    ComponentID componentID = ComponentIDGenerator::getComponentID<Component>();
+    Record &record = entityIndex[entity];
+    auto &edgesMap = record.archetype->edges;
+    ComponentID &componentID =
+        ComponentIDGenerator::getComponentID<Component>();
     auto it = edgesMap.find(componentID);
-    Archetype &oldArchetype = record.archetype;
+    Archetype *oldArchetype = record.archetype;
     Archetype *newArchetype;
     if (it != edgesMap.end()) {
       newArchetype = &it->second.edge;
     } else {
-      Type newType = oldArchetype.type.clone();
+      Type newType = oldArchetype->type.clone();
       newType.add(ComponentIDGenerator::getComponentID<Component>());
       // if it doesnt exist create a new archetype and insert it to the map
       auto [itArche, inserted] =
@@ -238,23 +266,24 @@ struct Register {
         newArchetype->edges.emplace(componentID, oldArchetype);
         componentIndex[componentID].emplace(newArchetype);
       }
-      oldArchetype.edges.emplace(componentID, newArchetype);
+      oldArchetype->edges.emplace(componentID, newArchetype);
     }
 
-    newArchetype->addValue<Component>(record.archetype, component, record.row);
-    record.archetype = *newArchetype;
+    newArchetype->copyValue<Component>(oldArchetype, component, record.row);
+    oldArchetype->swapWithLastElement(record.row);
+    record.archetype = newArchetype;
 
     // update the EntityIndex map
-    entityIndex[entity].archetype = *newArchetype;
+    entityIndex[entity].archetype = newArchetype;
     entityIndex[entity].row = newArchetype->components[0].size() - 1;
     // place it inside
   }
 
   template <typename Component>
   void updateComponent(Component component, EntityID entity) {
-    Record entityRecord = entityIndex[entity];
-    Archetype entityArchetype = entityRecord.archetype;
-    Column componentColumn =
+    Record &entityRecord = entityIndex[entity];
+    Archetype &entityArchetype = *entityRecord.archetype;
+    Column &componentColumn =
         entityArchetype.components[entityArchetype.type.find(
             ComponentIDGenerator::getComponentID<Component>())];
     componentColumn.updateElement<Component>(component, entityRecord.row);
@@ -263,42 +292,39 @@ struct Register {
   // it isnt safe and might cause unexpected bugs if tried to delete components
   // that doesnt exist
   template <typename Component> void deleteComponent(EntityID entity) {
-    Record record = entityIndex[entity];
-    auto edgesMap = record.archetype.edges;
+    Record &record = entityIndex[entity];
+    auto &edgesMap = record.archetype->edges;
     ComponentID componentID = ComponentIDGenerator::getComponentID<Component>();
     auto it = edgesMap.find(componentID);
     Archetype *newArchetype;
+    Archetype *oldArchetype = record.archetype;
     if (it != edgesMap.end()) {
       newArchetype = &it->second.edge;
     } else {
-      Archetype &oldArchetype = record.archetype;
-      Type newType = oldArchetype.type.clone();
+      Type newType = oldArchetype->type.clone();
       newType.remove(ComponentIDGenerator::getComponentID<Component>());
-      auto itArche = archetypeIndex.find(newType);
-      // if it doesnt exist create a new archetype and insert it to the map
-      if (itArche != archetypeIndex.end()) {
-        newArchetype = &itArche->second;
-      } else {
-        newArchetype = new Archetype();
-        newArchetype->type = newType;
-        newArchetype->components = newType.initComponentVector();
+      auto [itArche, inserted] =
+          archetypeIndex.emplace(std::move(newType), Archetype{});
+      newArchetype = &itArche->second;
+      if (inserted) {
+        newArchetype->type = itArche->first;  // The key Type
+        newArchetype->components = newArchetype->type.initComponentVector();
         newArchetype->edges.emplace(componentID, oldArchetype);
-
-        archetypeIndex[newType] = *newArchetype;
         componentIndex[componentID].emplace(newArchetype);
       }
-      oldArchetype.edges.emplace(componentID, newArchetype);
+      oldArchetype->edges.emplace(componentID, newArchetype);
     }
 
-    newArchetype->addValue<Component>(record.archetype, record.row);
-    record.archetype = *newArchetype;
+    newArchetype->copyValue<Component>(record.archetype, record.row);
+    oldArchetype->swapWithLastElement(record.row);
+    record.archetype = newArchetype;
 
     // update the EntityIndex map
-    entityIndex[entity].archetype = *newArchetype;
+    entityIndex[entity].archetype = newArchetype;
     entityIndex[entity].row = newArchetype->components[0].size() - 1;
   }
 
-  Archetype &findArchetype(EntityID entity) {
+  Archetype *findArchetype(EntityID entity) {
     return entityIndex[entity].archetype;
   }
 

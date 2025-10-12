@@ -26,7 +26,9 @@ class Entity {
 
   static genid_t getGen(EntityID entityId) { return entityId >> 24; }
 
-  static void setId(EntityID &entityId, physid_t id) { entityId = (entityId & GEN_MASK) | (id & ID_MASK); }
+  static void setId(EntityID &entityId, physid_t id) {
+    entityId = (entityId & GEN_MASK) | (id & ID_MASK);
+  }
 
   static void setGen(EntityID &entityId, genid_t gen) {
     entityId = (static_cast<EntityID>(gen) << 24) | (entityId & ID_MASK);
