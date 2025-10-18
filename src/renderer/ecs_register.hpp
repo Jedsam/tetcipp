@@ -44,6 +44,20 @@ struct Register {
       return &(reinterpret_cast<Component *>(data))[index];
     }
 
+    void swapWithLastElementAndDelete(size_t row) {
+      if (count == 0) {
+        return;
+      }
+      count--;
+      std::memcpy(at(row), at(count), element_size);
+
+      if (count > 16 && count < capacity / 4) {
+        data = reallocarray(data, capacity / 2, element_size);
+        capacity /= 2;
+      }
+      count++;
+    }
+
     void swapWithLastElement(size_t row) {
       if (count == 0) {
         return;
@@ -192,6 +206,7 @@ struct Register {
         components[i].swapWithLastElement(row);
       }
       entities[row] = entities[entities.size() - 1];
+      entities.pop_back();
     }
 
     // Adds a value to the archetype given the archetype the components resides
@@ -286,8 +301,17 @@ struct Register {
     entityIndex[currentID] = record;
   }
 
-  void deleteEntity(EntityID entity);
-  bool isEntityAlive(EntityID entity);
+  void deleteEntity(EntityID entity) {
+    Record &record = entityIndex[entity];
+    Archetype *archetype = record.archetype;
+    archetype->swapWithLastElement(record.row);
+    entityIndex.erase(entity);
+    deletedEntities.push_back(entity);
+  }
+
+  bool isEntityAlive(EntityID entity) {
+    return entityIndex.find(entity) != entityIndex.end();
+  }
 
   // it isnt safe and might cause unexpected bugs if tried to add components
   // that exist
