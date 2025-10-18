@@ -7,4 +7,4 @@
 * Memory allocation optimized
 * Code optimized for unnecessary stuff in main loop
 * New more modular class implementation for time management ?
-* Implement Archetypes (using flecs library)
+* Implement ECS using flecs library
