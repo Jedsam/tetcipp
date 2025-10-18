@@ -185,6 +185,8 @@ struct Register {
     std::vector<EntityID> entities;
     std::unordered_map<ComponentID, ArchetypeEdge> edges;
 
+    size_t size() { return entities.size(); }
+
     void swapWithLastElement(size_t row) {
       for (int i = 0; i < components.size(); i++) {
         components[i].swapWithLastElement(row);
@@ -234,8 +236,55 @@ struct Register {
     size_t row;
   };
 
-  // TO DO entity creationg and deletion
-  template <typename Component> EntityID createEntity(Component component) {}
+  // TO DO entity creation and deletion
+  template <typename Component> EntityID createEntity(Component component) {
+    // Find the id of the entity
+    EntityID currentID;
+    if (deletedEntities.empty()) {
+      currentID = nextId;
+      nextId++;
+    } else {
+      // pop the last element and use it
+      currentID = deletedEntities[deletedEntities.size() - 1];
+      currentID = Entity::incrementGen(currentID);
+      deletedEntities.pop_back();
+    }
+
+    // find the archetype if it exists
+    auto &edgesMap = baseArchetype.edges;
+    ComponentID &componentID =
+        ComponentIDGenerator::getComponentID<Component>();
+    auto it = edgesMap.find(componentID);
+    Archetype *newArchetype;
+    if (it != edgesMap.end()) {
+      newArchetype = &it->second.edge;
+    } else {
+      Type newType = Type();
+      newType.add(componentID);
+      // if it doesnt exist create a new archetype and insert it to the map
+      auto [itArche, inserted] =
+          archetypeIndex.emplace(std::move(newType), Archetype{});
+      newArchetype = &itArche->second;
+      if (inserted) {
+        newArchetype->type = itArche->first;  // The key Type
+        newArchetype->components = newArchetype->type.initComponentVector();
+        newArchetype->edges.emplace(componentID, baseArchetype);
+        componentIndex[componentID].emplace(newArchetype);
+      }
+      baseArchetype.edges.emplace(componentID, newArchetype);
+    }
+    size_t row = newArchetype->size();
+
+    // and create a record
+    Record record = Record();
+    record.archetype = newArchetype;
+    record.row = row;
+
+    newArchetype->copyValue<Component>(baseArchetype, component, record.row);
+
+    // update the EntityIndex map
+    entityIndex[currentID] = record;
+  }
 
   void deleteEntity(EntityID entity);
   bool isEntityAlive(EntityID entity);
@@ -276,7 +325,6 @@ struct Register {
     // update the EntityIndex map
     entityIndex[entity].archetype = newArchetype;
     entityIndex[entity].row = newArchetype->components[0].size() - 1;
-    // place it inside
   }
 
   template <typename Component>
@@ -358,6 +406,8 @@ struct Register {
  private:
   EntityID nextId = 1;
 
+  Archetype baseArchetype = Archetype();  // to be initialized at creation
+  std::vector<EntityID> deletedEntities;
   std::unordered_map<EntityID, Record> entityIndex;
 
   struct TypeHasher {

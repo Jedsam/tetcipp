@@ -26,6 +26,10 @@ class Entity {
 
   static genid_t getGen(EntityID entityId) { return entityId >> 24; }
 
+  static genid_t incrementGen(EntityID entityId) {
+    return entityId + 0x01000000;
+  }
+
   static void setId(EntityID &entityId, physid_t id) {
     entityId = (entityId & GEN_MASK) | (id & ID_MASK);
   }
