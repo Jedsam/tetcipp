@@ -26,16 +26,18 @@ class Entity {
 
   static genid_t getGen(EntityID entityId) { return entityId >> 24; }
 
-  static genid_t incrementGen(EntityID entityId) {
-    return entityId + 0x01000000;
+  static EntityID incrementGen(EntityID entityId) {
+    genid_t gen = getGen(entityId);
+    gen++;
+    return (static_cast<EntityID>(gen) << 24) | getId(entityId);
   }
 
-  static void setId(EntityID &entityId, physid_t id) {
-    entityId = (entityId & GEN_MASK) | (id & ID_MASK);
+  static void setId(EntityID *entityId, physid_t id) {
+    *entityId = (*entityId & GEN_MASK) | (id & ID_MASK);
   }
 
-  static void setGen(EntityID &entityId, genid_t gen) {
-    entityId = (static_cast<EntityID>(gen) << 24) | (entityId & ID_MASK);
+  static void setGen(EntityID *entityId, genid_t gen) {
+    *entityId = (static_cast<EntityID>(gen) << 24) | (*entityId & ID_MASK);
   }
 };
 }  // namespace ecs

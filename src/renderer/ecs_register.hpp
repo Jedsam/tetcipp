@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <numeric>
 #include <unordered_map>
 #include <unordered_set>
@@ -44,55 +45,38 @@ struct Register {
       return &(reinterpret_cast<Component *>(data))[index];
     }
 
-    void swapWithLastElementAndDelete(size_t row) {
-      if (count == 0) {
-        return;
-      }
-      count--;
-      std::memcpy(at(row), at(count), element_size);
-
-      if (count > 16 && count < capacity / 4) {
-        data = reallocarray(data, capacity / 2, element_size);
-        capacity /= 2;
-      }
-      count++;
-    }
-
     void swapWithLastElement(size_t row) {
       if (count == 0) {
         return;
       }
-      count--;
       std::memcpy(at(row), at(count), element_size);
 
       if (count > 16 && count < capacity / 4) {
         data = reallocarray(data, capacity / 2, element_size);
         capacity /= 2;
       }
-      count++;
     }
 
-    template <typename Component>
-    void pushBack(const Component &component, size_t index) {
+    void pushBack(Column *inputColumn, size_t index) {
       if (count >= capacity) {
         data = reallocarray(data, capacity * 2, element_size);
         capacity *= 2;
       }
-      std::memcpy(at(count), &component, element_size);
+      std::memcpy(at(count), inputColumn->at(index), element_size);
       count++;
     }
 
-    void pushBack(Column &inputColumn, size_t index) {
-      if (count >= capacity / 2) {
+    template <typename Component> void pushBack(Component *component) {
+      if (count >= capacity) {
         data = reallocarray(data, capacity * 2, element_size);
         capacity *= 2;
       }
-      std::memcpy(at(count), inputColumn.at(index), element_size);
+      std::memcpy(at(count), component, element_size);
       count++;
     }
 
     template <typename Component>
-    void updateElement(const Component &component, size_t index) {
+    void updateElement(Component *component, size_t index) {
       if (index >= capacity) {
         return;
       }
@@ -100,6 +84,8 @@ struct Register {
     }
 
     void deleteElement(size_t index) {
+      if (count == 0 || index >= count)
+        return;
       // replace the element with the top value
       std::memcpy(at(index), at(count - 1), element_size);
       if (count > 16 && count < capacity / 4) {
@@ -185,7 +171,7 @@ struct Register {
   struct Archetype;
 
   struct ArchetypeEdge {
-    Archetype &edge;  // both add and remove are same
+    Archetype *edge;  // both add and remove are same
   };
 
   struct Archetype {
@@ -201,12 +187,23 @@ struct Register {
 
     size_t size() { return entities.size(); }
 
-    void swapWithLastElement(size_t row) {
+    EntityID deleteElement(size_t row) {
+      for (int i = 0; i < components.size(); i++) {
+        components[i].deleteElement(row);
+      }
+      EntityID changedEntity = entities[entities.size() - 1];
+      entities[row] = changedEntity;
+      entities.pop_back();
+      return changedEntity;
+    }
+
+    EntityID swapWithLastElement(size_t row) {
       for (int i = 0; i < components.size(); i++) {
         components[i].swapWithLastElement(row);
       }
-      entities[row] = entities[entities.size() - 1];
-      entities.pop_back();
+      EntityID changedEntity = entities[entities.size() - 1];
+      entities[row] = changedEntity;
+      return changedEntity;
     }
 
     // Adds a value to the archetype given the archetype the components resides
@@ -220,10 +217,10 @@ struct Register {
       auto &oldType = oldArchetype.type;
       for (int i = 0, j = 0; i < newComponents.size(); i++) {
         if (newType[i] == oldType[j]) {
-          newComponents[i].pushBack(oldComponents[j], row);
+          newComponents[i].pushBack(&oldComponents[j], row);
           j++;
         } else {
-          newComponents[i].pushBack<Component>(component, row);
+          newComponents[i].pushBack<Component>(&component);
         }
       }
       entities.push_back(oldArchetype.entities[row]);
@@ -272,21 +269,21 @@ struct Register {
     auto it = edgesMap.find(componentID);
     Archetype *newArchetype;
     if (it != edgesMap.end()) {
-      newArchetype = &it->second.edge;
+      newArchetype = it->second.edge;
     } else {
       Type newType = Type();
       newType.add(componentID);
       // if it doesnt exist create a new archetype and insert it to the map
-      auto [itArche, inserted] =
-          archetypeIndex.emplace(std::move(newType), Archetype{});
-      newArchetype = &itArche->second;
+      auto [itArche, inserted] = archetypeIndex.emplace(
+          std::move(newType), std::make_unique<Archetype>());
+      newArchetype = itArche->second.get();
       if (inserted) {
         newArchetype->type = itArche->first;  // The key Type
         newArchetype->components = newArchetype->type.initComponentVector();
-        newArchetype->edges.emplace(componentID, baseArchetype);
+        newArchetype->edges.emplace(componentID, ArchetypeEdge{&baseArchetype});
         componentIndex[componentID].emplace(newArchetype);
       }
-      baseArchetype.edges.emplace(componentID, newArchetype);
+      baseArchetype.edges.emplace(componentID, ArchetypeEdge{newArchetype});
     }
     size_t row = newArchetype->size();
 
@@ -304,7 +301,7 @@ struct Register {
   void deleteEntity(EntityID entity) {
     Record &record = entityIndex[entity];
     Archetype *archetype = record.archetype;
-    archetype->swapWithLastElement(record.row);
+    entityIndex[archetype->deleteElement(record.row)].row = record.row;
     entityIndex.erase(entity);
     deletedEntities.push_back(entity);
   }
@@ -325,25 +322,25 @@ struct Register {
     Archetype *oldArchetype = record.archetype;
     Archetype *newArchetype;
     if (it != edgesMap.end()) {
-      newArchetype = &it->second.edge;
+      newArchetype = it->second.edge;
     } else {
       Type newType = oldArchetype->type.clone();
       newType.add(ComponentIDGenerator::getComponentID<Component>());
       // if it doesnt exist create a new archetype and insert it to the map
-      auto [itArche, inserted] =
-          archetypeIndex.emplace(std::move(newType), Archetype{});
-      newArchetype = &itArche->second;
+      auto [itArche, inserted] = archetypeIndex.emplace(
+          std::move(newType), std::make_unique<Archetype>());
+      newArchetype = itArche->second.get();
       if (inserted) {
         newArchetype->type = itArche->first;  // The key Type
         newArchetype->components = newArchetype->type.initComponentVector();
-        newArchetype->edges.emplace(componentID, oldArchetype);
+        newArchetype->edges.emplace(componentID, ArchetypeEdge{oldArchetype});
         componentIndex[componentID].emplace(newArchetype);
       }
-      oldArchetype->edges.emplace(componentID, newArchetype);
+      oldArchetype->edges.emplace(componentID, ArchetypeEdge{newArchetype});
     }
 
     newArchetype->copyValue<Component>(oldArchetype, component, record.row);
-    oldArchetype->swapWithLastElement(record.row);
+    entityIndex[oldArchetype->swapWithLastElement(record.row)].row = record.row;
     record.archetype = newArchetype;
 
     // update the EntityIndex map
@@ -371,24 +368,24 @@ struct Register {
     Archetype *newArchetype;
     Archetype *oldArchetype = record.archetype;
     if (it != edgesMap.end()) {
-      newArchetype = &it->second.edge;
+      newArchetype = it->second.edge;
     } else {
       Type newType = oldArchetype->type.clone();
       newType.remove(ComponentIDGenerator::getComponentID<Component>());
-      auto [itArche, inserted] =
-          archetypeIndex.emplace(std::move(newType), Archetype{});
-      newArchetype = &itArche->second;
+      auto [itArche, inserted] = archetypeIndex.emplace(
+          std::move(newType), std::make_unique<Archetype>());
+      newArchetype = itArche->second.get();
       if (inserted) {
         newArchetype->type = itArche->first;  // The key Type
         newArchetype->components = newArchetype->type.initComponentVector();
-        newArchetype->edges.emplace(componentID, oldArchetype);
+        newArchetype->edges.emplace(componentID, ArchetypeEdge{oldArchetype});
         componentIndex[componentID].emplace(newArchetype);
       }
-      oldArchetype->edges.emplace(componentID, newArchetype);
+      oldArchetype->edges.emplace(componentID, ArchetypeEdge{newArchetype});
     }
 
-    newArchetype->copyValue<Component>(record.archetype, record.row);
-    oldArchetype->swapWithLastElement(record.row);
+    newArchetype->copyValue(*oldArchetype, record.row);
+    entityIndex[oldArchetype->swapWithLastElement(record.row)].row = record.row;
     record.archetype = newArchetype;
 
     // update the EntityIndex map
@@ -447,7 +444,9 @@ struct Register {
     }
   };
 
-  std::unordered_map<Type, Archetype, TypeHasher> archetypeIndex;
+  // In struct Register:
+  std::unordered_map<Type, std::unique_ptr<Archetype>, TypeHasher>
+      archetypeIndex;
 
   // Find the archetypes for a component
   std::unordered_map<ComponentID, ArchetypeSet> componentIndex;
