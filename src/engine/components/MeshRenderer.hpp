@@ -2,11 +2,11 @@
 
 #include <memory>
 
-#include "rlm/rlm_model.hpp"
+#include "rlm/model.hpp"
 
 namespace component {
 
 struct ModelComponent {
-  std::shared_ptr<rlm::RLMModel> model;
+  std::shared_ptr<rlm::Model> model;
 };
 }  // namespace component
