@@ -13,8 +13,8 @@
 // #include <glm/gtc/constants.hpp>
 // #include <glm/common.hpp>
 
-#include "renderer/rlm_model.hpp"
-#include "renderer/rlm_pipeline.hpp"
+#include "rlm_model.hpp"
+#include "rlm_pipeline.hpp"
 #include "rlm_simple_renderer.hpp"
 
 namespace rlm {
@@ -33,38 +33,51 @@ SimpleRenderSystem::SimpleRenderSystem(
 }
 
 void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
-  assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
+  assert(
+      pipelineLayout != nullptr &&
+      "Cannot create pipeline before pipeline layout");
   PipelineConfigInfo pipelineConfigInfo{};
   RLMPipeline::defaultPipelineConfigInfo(pipelineConfigInfo);
   pipelineConfigInfo.renderPass = renderPass;
   pipelineConfigInfo.pipelineLayout = pipelineLayout;
-  pipelineConfigInfo.bindingDescription = RLMModel::Vertex::getBindingDescriptions();
-  pipelineConfigInfo.attributeDescription = RLMModel::Vertex::getAttributeDescriptions();
+  pipelineConfigInfo.bindingDescription =
+      RLMModel::Vertex::getBindingDescriptions();
+  pipelineConfigInfo.attributeDescription =
+      RLMModel::Vertex::getAttributeDescriptions();
 
   rlmPipeline = std::make_unique<RLMPipeline>(
-      rlmDevice, "shaders/shader.vert.spv", "shaders/shader.frag.spv", pipelineConfigInfo);
+      rlmDevice,
+      "shaders/shader.vert.spv",
+      "shaders/shader.frag.spv",
+      pipelineConfigInfo);
   if (rlmPipeline == nullptr) {
     throw std::runtime_error("RLMPipeline creation was unsuccessful");
   }
 }
 
-void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, RLMModel &model) {
+void SimpleRenderSystem::renderGameObjects(
+    VkCommandBuffer commandBuffer,
+    RLMModel &model) {
   rlmPipeline->bindCommandBuffer(commandBuffer);
 
   model.bind(commandBuffer);
   model.draw(commandBuffer);
 }
 
-void SimpleRenderSystem::createPipelineLayout(RLMDescriptorSetLayout globalLayout) {
-  std::vector<VkDescriptorSetLayout> layoutArray{globalLayout.getDescriptorSetLayout()};
+void SimpleRenderSystem::createPipelineLayout(
+    RLMDescriptorSetLayout globalLayout) {
+  std::vector<VkDescriptorSetLayout> layoutArray{
+      globalLayout.getDescriptorSetLayout()};
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(layoutArray.size());  // Optional
-  pipelineLayoutInfo.pSetLayouts = layoutArray.data();                            // Optional
-  pipelineLayoutInfo.pushConstantRangeCount = 0;                                  // Optional
-  pipelineLayoutInfo.pPushConstantRanges = nullptr;                               // Optional
+  pipelineLayoutInfo.setLayoutCount =
+      static_cast<uint32_t>(layoutArray.size());        // Optional
+  pipelineLayoutInfo.pSetLayouts = layoutArray.data();  // Optional
+  pipelineLayoutInfo.pushConstantRangeCount = 0;        // Optional
+  pipelineLayoutInfo.pPushConstantRanges = nullptr;     // Optional
 
-  auto result = vkCreatePipelineLayout(rlmDevice.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
+  auto result = vkCreatePipelineLayout(
+      rlmDevice.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to create pipeline layout!");
   }

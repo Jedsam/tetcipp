@@ -2,8 +2,8 @@
 
 #include <cstring>
 
-#include "renderer/rlm_device.hpp"
 #include "rlm_buffer.hpp"
+#include "rlm_device.hpp"
 
 namespace rlm {
 RLMBuffer::RLMBuffer(
@@ -13,11 +13,13 @@ RLMBuffer::RLMBuffer(
     VkBufferUsageFlags usageFlags,
     VkMemoryPropertyFlags memoryPropertyFlags,
     VkDeviceSize minOffsetAlignment)
-    : rlmDevice{rlmDevice}, bufferSize{instanceSize * instanceCount}, instanceCount{instanceCount},
-      usageFlags{usageFlags}, memoryPropertyFlags{memoryPropertyFlags} {
+    : rlmDevice{rlmDevice}, bufferSize{instanceSize * instanceCount},
+      instanceCount{instanceCount}, usageFlags{usageFlags},
+      memoryPropertyFlags{memoryPropertyFlags} {
   // alignmentSize = getAlignment(instanceSize, minOffsetAlignment);
 
-  rlmDevice.createBuffer(bufferSize, usageFlags, memoryPropertyFlags, buffer, bufferMemory);
+  rlmDevice.createBuffer(
+      bufferSize, usageFlags, memoryPropertyFlags, buffer, bufferMemory);
 }
 
 RLMBuffer::~RLMBuffer() {
@@ -27,16 +29,22 @@ RLMBuffer::~RLMBuffer() {
 }
 
 void RLMBuffer::mapMemory(VkDeviceSize size, VkDeviceSize offset) {
-  // It is also possible to specify the special value VK_WHOLE_SIZE to map all of the memory
-  vkMapMemory(rlmDevice.getDevice(), bufferMemory, 0, bufferSize, 0, &mappedData);
+  // It is also possible to specify the special value VK_WHOLE_SIZE to map all
+  // of the memory
+  vkMapMemory(
+      rlmDevice.getDevice(), bufferMemory, 0, bufferSize, 0, &mappedData);
 }
 
 void RLMBuffer::unmapMemory() {
-  // It is also possible to specify the special value VK_WHOLE_SIZE to map all of the memory
+  // It is also possible to specify the special value VK_WHOLE_SIZE to map all
+  // of the memory
   vkUnmapMemory(rlmDevice.getDevice(), bufferMemory);
 }
 
-void RLMBuffer::writeToBuffer(const void *data, VkDeviceSize size, VkDeviceSize offset) {
+void RLMBuffer::writeToBuffer(
+    const void *data,
+    VkDeviceSize size,
+    VkDeviceSize offset) {
   memcpy(mappedData, data, reinterpret_cast<size_t>(bufferSize));
 }
 }  // namespace rlm

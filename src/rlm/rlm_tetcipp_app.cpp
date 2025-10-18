@@ -8,11 +8,11 @@
 #include <memory>
 #include <vector>
 
-#include "renderer/rlm_model.hpp"
-#include "renderer/rlm_renderer.hpp"
-#include "renderer/rlm_simple_renderer.hpp"
-#include "rlm_descriptor_set.hpp"
-#include "rlm_descriptor_set_layout.hpp"
+#include "descriptor_set/rlm_descriptor_set.hpp"
+#include "descriptor_set/rlm_descriptor_set_layout.hpp"
+#include "rlm_model.hpp"
+#include "rlm_renderer.hpp"
+#include "rlm_simple_renderer.hpp"
 #include "rlm_tetcipp_app.hpp"
 
 namespace rlm {
@@ -45,16 +45,21 @@ void RLMApplication::init() {
 }
 
 void RLMApplication::mainLoop() {
-  auto descriptorSetLayout = RLMDescriptorSetLayout::Builder(*rlmDevice)
-                                 .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
-                                 .build();
+  auto descriptorSetLayout =
+      RLMDescriptorSetLayout::Builder(*rlmDevice)
+          .addBinding(
+              0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+          .build();
 
-  auto uboSet = RLMDescriptorSet::Builder(*rlmDevice)
-                    .addDescriptorSetLayout(*descriptorSetLayout)
-                    .createBufferMemory(sizeof(UniformBufferObject), RLMRenderer::MAX_FRAMES_IN_FLIGHT)
-                    .build();
+  auto uboSet =
+      RLMDescriptorSet::Builder(*rlmDevice)
+          .addDescriptorSetLayout(*descriptorSetLayout)
+          .createBufferMemory(
+              sizeof(UniformBufferObject), RLMRenderer::MAX_FRAMES_IN_FLIGHT)
+          .build();
 
-  SimpleRenderSystem simpleRenderSystem{*rlmDevice, rlmRenderer->getRenderPass(), *descriptorSetLayout};
+  SimpleRenderSystem simpleRenderSystem{
+      *rlmDevice, rlmRenderer->getRenderPass(), *descriptorSetLayout};
 
   auto currentTime = std::chrono::high_resolution_clock::now();
   auto lastTime = std::chrono::high_resolution_clock::now();
@@ -75,8 +80,12 @@ void RLMApplication::mainLoop() {
   while (!rlmWindow->shouldClose()) {
     auto newTime = std::chrono::high_resolution_clock::now();
     float frameTime =
-        std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
-    float elapsed = std::chrono::duration<float, std::chrono::seconds::period>(newTime - lastTime).count();
+        std::chrono::duration<float, std::chrono::seconds::period>(
+            newTime - currentTime)
+            .count();
+    float elapsed = std::chrono::duration<float, std::chrono::seconds::period>(
+                        newTime - lastTime)
+                        .count();
     currentTime = newTime;
 
     frameCount++;
@@ -84,7 +93,8 @@ void RLMApplication::mainLoop() {
     rlmRenderer->beginFrame();
     rlmRenderer->beginRenderPass();
 
-    simpleRenderSystem.renderGameObjects(rlmRenderer->getCommandBuffer(), tempModel);
+    simpleRenderSystem.renderGameObjects(
+        rlmRenderer->getCommandBuffer(), tempModel);
     // record stuff
     rlmRenderer->endRenderPass();
     rlmRenderer->endFrame();

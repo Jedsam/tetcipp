@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "renderer/rlm_device.hpp"
+#include "rlm_device.hpp"
 
 namespace rlm {
 
@@ -55,7 +55,9 @@ class RLMPipeline {
       const std::string &vertFilePath,
       const std::string &fragFilePath,
       const PipelineConfigInfo &configInfo);
-  void createShaderModule(const std::vector<char> &code, VkShaderModule *shaderModule);
+  void createShaderModule(
+      const std::vector<char> &code,
+      VkShaderModule *shaderModule);
 
   VkShaderModule vertShaderModule;
   VkShaderModule fragShaderModule;

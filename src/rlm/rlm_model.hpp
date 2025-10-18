@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include "renderer/rlm_buffer.hpp"
-#include "renderer/rlm_device.hpp"
+#include "rlm_buffer.hpp"
+#include "rlm_device.hpp"
 #include <glm/glm.hpp>
 
 namespace rlm {
@@ -19,8 +19,10 @@ class RLMModel {
     glm::vec2 pos;
     glm::vec3 color;
 
-    static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
-    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+    static std::vector<VkVertexInputBindingDescription>
+    getBindingDescriptions();
+    static std::vector<VkVertexInputAttributeDescription>
+    getAttributeDescriptions();
   };
 
   struct Builder {

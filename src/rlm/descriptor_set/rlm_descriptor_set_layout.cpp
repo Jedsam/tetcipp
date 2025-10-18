@@ -8,7 +8,8 @@
 
 namespace rlm {
 // Builder
-RLMDescriptorSetLayout::Builder::Builder(RLMDevice &rlmDevice) : rlmDevice{rlmDevice} {}
+RLMDescriptorSetLayout::Builder::Builder(RLMDevice &rlmDevice)
+    : rlmDevice{rlmDevice} {}
 
 RLMDescriptorSetLayout::Builder &RLMDescriptorSetLayout::Builder::addBinding(
     uint32_t binding,
@@ -27,14 +28,16 @@ RLMDescriptorSetLayout::Builder &RLMDescriptorSetLayout::Builder::addBinding(
   return *this;
 }
 
-std::unique_ptr<RLMDescriptorSetLayout> RLMDescriptorSetLayout::Builder::build() const {
+std::unique_ptr<RLMDescriptorSetLayout>
+RLMDescriptorSetLayout::Builder::build() const {
   return std::make_unique<RLMDescriptorSetLayout>(rlmDevice, setLayoutBindings);
 }
 
 // RLMDescriptorSetLayout
 RLMDescriptorSetLayout::RLMDescriptorSetLayout(
     RLMDevice &rlmDevice,
-    std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> setLayoutBindings)
+    std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding>
+        setLayoutBindings)
     : rlmDevice{rlmDevice}, setLayoutBindings{setLayoutBindings} {
   std::vector<VkDescriptorSetLayoutBinding> bindingsVector;
 
@@ -49,13 +52,15 @@ RLMDescriptorSetLayout::RLMDescriptorSetLayout(
   layoutInfo.bindingCount = static_cast<uint32_t>(bindingsVector.size());
   layoutInfo.pBindings = bindingsVector.data();
 
-  if (vkCreateDescriptorSetLayout(rlmDevice.getDevice(), &layoutInfo, nullptr, &descriptorSetLayout) !=
+  if (vkCreateDescriptorSetLayout(
+          rlmDevice.getDevice(), &layoutInfo, nullptr, &descriptorSetLayout) !=
       VK_SUCCESS) {
     throw std::runtime_error("failed to create descriptor set layout!");
   }
 }
 
 RLMDescriptorSetLayout::~RLMDescriptorSetLayout() {
-  vkDestroyDescriptorSetLayout(rlmDevice.getDevice(), descriptorSetLayout, nullptr);
+  vkDestroyDescriptorSetLayout(
+      rlmDevice.getDevice(), descriptorSetLayout, nullptr);
 }
 }  // namespace rlm

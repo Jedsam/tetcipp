@@ -4,12 +4,15 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "renderer/rlm_tetcipp_app.hpp"
+#include "Game.hpp"
 #include "spdlog/sinks/basic_file_sink.h"
+
+namespace app {
 
 void init_logger() {
   try {
-    auto logger = spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt", true);
+    auto logger =
+        spdlog::basic_logger_mt("basic_logger", "logs/basic-log.txt", true);
     spdlog::set_default_logger(logger);
 
 #ifdef NDEBUG
@@ -33,7 +36,7 @@ int main() {
   // Initialize logger
   init_logger();
 
-  rlm::RLMApplication app;
+  Game app;
 
   try {
     app.run();
@@ -44,3 +47,4 @@ int main() {
 
   return EXIT_SUCCESS;
 }
+}  // namespace app

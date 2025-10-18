@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan_core.h>
 
-#include "renderer/rlm_device.hpp"
+#include "rlm_device.hpp"
 
 namespace rlm {
 
@@ -18,7 +18,10 @@ class RLMBuffer {
   ~RLMBuffer();
 
   void mapMemory(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
-  void writeToBuffer(const void *data, VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
+  void writeToBuffer(
+      const void *data,
+      VkDeviceSize size = VK_WHOLE_SIZE,
+      VkDeviceSize offset = 0);
 
   VkBuffer getBuffer() { return buffer; }
 

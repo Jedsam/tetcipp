@@ -45,8 +45,8 @@ VkResult CreateDebugUtilsMessengerEXT(
     const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo,
     const VkAllocationCallbacks *pAllocator,
     VkDebugUtilsMessengerEXT *pDebugMessenger) {
-  auto func =
-      (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+  auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+      instance, "vkCreateDebugUtilsMessengerEXT");
   if (func != nullptr) {
     return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
   } else {
@@ -58,8 +58,8 @@ void DestroyDebugUtilsMessengerEXT(
     VkInstance instance,
     VkDebugUtilsMessengerEXT debugMessenger,
     const VkAllocationCallbacks *pAllocator) {
-  auto func =
-      (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+  auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
+      instance, "vkDestroyDebugUtilsMessengerEXT");
   if (func != nullptr) {
     func(instance, debugMessenger, pAllocator);
   }
@@ -99,10 +99,11 @@ void RLMDevice::createCommandPool() {
   VkCommandPoolCreateInfo poolInfo{};
   // There are two possible flags for command pools:
 
-  // -VK_COMMAND_POOL_CREATE_TRANSIENT_BIT: Hint that command buffers are rerecorded with new commands very
-  // often (may change memory allocation behavior)
-  // -VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT: Allow
-  // command buffers to be rerecorded individually, without this flag they all have to be reset together
+  // -VK_COMMAND_POOL_CREATE_TRANSIENT_BIT: Hint that command buffers are
+  // rerecorded with new commands very often (may change memory allocation
+  // behavior) -VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT: Allow command
+  // buffers to be rerecorded individually, without this flag they all have to
+  // be reset together
   poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
@@ -139,11 +140,13 @@ void RLMDevice::createInstance() {
   if (enableValidationLayers) {
     std::cout << std::format("The instance is in debug mode\n");
 
-    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+    createInfo.enabledLayerCount =
+        static_cast<uint32_t>(validationLayers.size());
     createInfo.ppEnabledLayerNames = validationLayers.data();
 
     populateDebugMessengerCreateInfo(debugCreateInfo);
-    createInfo.pNext = reinterpret_cast<VkDebugUtilsMessengerCreateInfoEXT *>(&debugCreateInfo);
+    createInfo.pNext = reinterpret_cast<VkDebugUtilsMessengerCreateInfoEXT *>(
+        &debugCreateInfo);
   } else {
     createInfo.enabledLayerCount = 0;
   }
@@ -164,14 +167,16 @@ void RLMDevice::setupDebugMessenger() {
   VkDebugUtilsMessengerCreateInfoEXT createInfo{};
   populateDebugMessengerCreateInfo(createInfo);
 
-  auto result = CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger);
+  auto result = CreateDebugUtilsMessengerEXT(
+      instance, &createInfo, nullptr, &debugMessenger);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("Failed to set up debug messenger");
   }
 }
 
 void RLMDevice::createSurface() {
-  auto result = glfwCreateWindowSurface(instance, rlmWindow.getGLFWWindow(), nullptr, &surface);
+  auto result = glfwCreateWindowSurface(
+      instance, rlmWindow.getGLFWWindow(), nullptr, &surface);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to create window surface!");
   }
@@ -196,7 +201,8 @@ void RLMDevice::pickPhysicalDevice() {
     int score = rateDeviceSuitability(myDevice);
     candidates.insert(std::make_pair(score, myDevice));
   }
-  spdlog::debug("RLMDevice::pickPhysicalDevice: Rated all devices succesfully!");
+  spdlog::debug(
+      "RLMDevice::pickPhysicalDevice: Rated all devices succesfully!");
 
   // Check if the best candidate is suitable at all
   if (candidates.rbegin()->first > 0) {
@@ -217,7 +223,8 @@ void RLMDevice::createLogicalDevice() {
   QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
   std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-  std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
+  std::set<uint32_t> uniqueQueueFamilies = {
+      indices.graphicsFamily.value(), indices.presentFamily.value()};
 
   float queuePriority = 1.0f;
   for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -233,14 +240,17 @@ void RLMDevice::createLogicalDevice() {
 
   VkDeviceCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-  createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+  createInfo.queueCreateInfoCount =
+      static_cast<uint32_t>(queueCreateInfos.size());
   createInfo.pQueueCreateInfos = queueCreateInfos.data();
   createInfo.pEnabledFeatures = &deviceFeatures;
-  createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+  createInfo.enabledExtensionCount =
+      static_cast<uint32_t>(deviceExtensions.size());
   createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
   if (enableValidationLayers) {
-    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+    createInfo.enabledLayerCount =
+        static_cast<uint32_t>(validationLayers.size());
     createInfo.ppEnabledLayerNames = validationLayers.data();
   } else {
     createInfo.enabledLayerCount = 0;
@@ -255,15 +265,18 @@ void RLMDevice::createLogicalDevice() {
   vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }
 
-QueueFamilyIndices RLMDevice::findQueueFamilies(VkPhysicalDevice myPhysicalDevice) {
+QueueFamilyIndices
+RLMDevice::findQueueFamilies(VkPhysicalDevice myPhysicalDevice) {
   spdlog::debug("RLMDevice::findQueueFamilies: Inside the function");
   QueueFamilyIndices indices;
   uint32_t queueFamilyCount = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(myPhysicalDevice, &queueFamilyCount, nullptr);
+  vkGetPhysicalDeviceQueueFamilyProperties(
+      myPhysicalDevice, &queueFamilyCount, nullptr);
   spdlog::debug("RLMDevice::findQueueFamilies: Got the family count");
 
   std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-  vkGetPhysicalDeviceQueueFamilyProperties(myPhysicalDevice, &queueFamilyCount, queueFamilies.data());
+  vkGetPhysicalDeviceQueueFamilyProperties(
+      myPhysicalDevice, &queueFamilyCount, queueFamilies.data());
   spdlog::debug("RLMDevice::findQueueFamilies: Got the queue family data");
 
   uint32_t i = 0;
@@ -272,7 +285,8 @@ QueueFamilyIndices RLMDevice::findQueueFamilies(VkPhysicalDevice myPhysicalDevic
       indices.graphicsFamily = i;
     }
     VkBool32 presentSupport = false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(myPhysicalDevice, i, surface, &presentSupport);
+    vkGetPhysicalDeviceSurfaceSupportKHR(
+        myPhysicalDevice, i, surface, &presentSupport);
     if (presentSupport) {
       indices.presentFamily = i;
     }
@@ -319,7 +333,8 @@ bool RLMDevice::isDeviceSuitable(VkPhysicalDevice myPhysicalDevice) {
     return false;
 
   spdlog::debug("RLMDevice::isDeviceSuitable: step 3");
-  SwapChainSupportDetails swapChainSupport = querySwapChainSupport(myPhysicalDevice);
+  SwapChainSupportDetails swapChainSupport =
+      querySwapChainSupport(myPhysicalDevice);
   if (swapChainSupport.formats.empty() || swapChainSupport.presentModes.empty())
     return false;
 
@@ -329,13 +344,15 @@ bool RLMDevice::isDeviceSuitable(VkPhysicalDevice myPhysicalDevice) {
 
 bool RLMDevice::checkDeviceExtensionSupport(VkPhysicalDevice myPhysicalDevice) {
   uint32_t extensionCount;
-  vkEnumerateDeviceExtensionProperties(myPhysicalDevice, nullptr, &extensionCount, nullptr);
+  vkEnumerateDeviceExtensionProperties(
+      myPhysicalDevice, nullptr, &extensionCount, nullptr);
 
   std::vector<VkExtensionProperties> availableExtensions(extensionCount);
   vkEnumerateDeviceExtensionProperties(
       myPhysicalDevice, nullptr, &extensionCount, availableExtensions.data());
 
-  std::set<std::string_view> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+  std::set<std::string_view> requiredExtensions(
+      deviceExtensions.begin(), deviceExtensions.end());
 
   for (const auto &extension : availableExtensions) {
     requiredExtensions.erase(extension.extensionName);
@@ -344,63 +361,76 @@ bool RLMDevice::checkDeviceExtensionSupport(VkPhysicalDevice myPhysicalDevice) {
   return requiredExtensions.empty();
 }
 
-SwapChainSupportDetails RLMDevice::querySwapChainSupport(VkPhysicalDevice myPhysicalDevice) {
+SwapChainSupportDetails
+RLMDevice::querySwapChainSupport(VkPhysicalDevice myPhysicalDevice) {
   SwapChainSupportDetails details;
 
-  auto result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(myPhysicalDevice, surface, &details.capabilities);
+  auto result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+      myPhysicalDevice, surface, &details.capabilities);
   if (result != VK_SUCCESS) {
-    throw std::runtime_error("failed to get physical device surface capabilities");
+    throw std::runtime_error(
+        "failed to get physical device surface capabilities");
   }
 
   uint32_t formatCount;
-  result = vkGetPhysicalDeviceSurfaceFormatsKHR(myPhysicalDevice, surface, &formatCount, nullptr);
+  result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+      myPhysicalDevice, surface, &formatCount, nullptr);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to get physical device surface formats");
   }
 
   if (formatCount != 0) {
     details.formats.resize(formatCount);
-    result =
-        vkGetPhysicalDeviceSurfaceFormatsKHR(myPhysicalDevice, surface, &formatCount, details.formats.data());
+    result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+        myPhysicalDevice, surface, &formatCount, details.formats.data());
     if (result != VK_SUCCESS) {
       throw std::runtime_error("failed to get physical device surface formats");
     }
   }
 
   uint32_t presentModeCount;
-  result = vkGetPhysicalDeviceSurfacePresentModesKHR(myPhysicalDevice, surface, &presentModeCount, nullptr);
+  result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+      myPhysicalDevice, surface, &presentModeCount, nullptr);
   if (result != VK_SUCCESS) {
-    throw std::runtime_error("failed to get physical device surface present modes");
+    throw std::runtime_error(
+        "failed to get physical device surface present modes");
   }
 
   if (presentModeCount != 0) {
     details.presentModes.resize(presentModeCount);
     result = vkGetPhysicalDeviceSurfacePresentModesKHR(
-        myPhysicalDevice, surface, &presentModeCount, details.presentModes.data());
+        myPhysicalDevice,
+        surface,
+        &presentModeCount,
+        details.presentModes.data());
     if (result != VK_SUCCESS) {
-      throw std::runtime_error("failed to get physical device surface present modes");
+      throw std::runtime_error(
+          "failed to get physical device surface present modes");
     }
   }
 
   return details;
 }
 
-void RLMDevice::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo) {
+void RLMDevice::populateDebugMessengerCreateInfo(
+    VkDebugUtilsMessengerCreateInfoEXT &createInfo) {
   createInfo = {};
   createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-  createInfo.messageSeverity =
-      VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
   createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
                            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
   createInfo.pfnUserCallback = debugCallback;
 }
 
-void RLMDevice::checkGLFWHasRequiredExtensions(const std::vector<const char *> &requiredExtensions) {
+void RLMDevice::checkGLFWHasRequiredExtensions(
+    const std::vector<const char *> &requiredExtensions) {
   uint32_t extensionCount = 0;
   vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
   std::vector<VkExtensionProperties> extensions(extensionCount);
-  vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
+  vkEnumerateInstanceExtensionProperties(
+      nullptr, &extensionCount, extensions.data());
 
   std::cout << "available extensions:\n";
   std::unordered_set<std::string> available;
@@ -421,7 +451,8 @@ std::vector<const char *> RLMDevice::getRequiredExtensions() {
   const char **glfwExtensions;
   glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-  std::vector<const char *> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+  std::vector<const char *> extensions(
+      glfwExtensions, glfwExtensions + glfwExtensionCount);
 
   if (enableValidationLayers) {
     extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -439,7 +470,9 @@ bool RLMDevice::checkValidationLayerSupport() {
 
   for (const char *layerName : validationLayers) {
     bool layerFound = std::any_of(
-        availableLayers.begin(), availableLayers.end(), [&layerName](const auto &layerProperties) {
+        availableLayers.begin(),
+        availableLayers.end(),
+        [&layerName](const auto &layerProperties) {
           return strcmp(layerName, layerProperties.layerName) == 0;
         });
 
@@ -469,32 +502,40 @@ void RLMDevice::createBuffer(
 
   // The VkMemoryRequirements struct has three fields:
   //
-  // size: The size of the required amount of memory in bytes, may differ from bufferInfo.size.
-  // alignment: The offset in bytes where the buffer begins in the allocated region of memory, depends on
-  // bufferInfo.usage and bufferInfo.flags. memoryTypeBits: Bit field of the memory types that are suitable
-  // for the buffer.
+  // size: The size of the required amount of memory in bytes, may differ from
+  // bufferInfo.size. alignment: The offset in bytes where the buffer begins in
+  // the allocated region of memory, depends on bufferInfo.usage and
+  // bufferInfo.flags. memoryTypeBits: Bit field of the memory types that are
+  // suitable for the buffer.
   VkMemoryRequirements memRequirements;
   vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
 
   VkMemoryAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+  allocInfo.memoryTypeIndex =
+      findMemoryType(memRequirements.memoryTypeBits, properties);
 
   auto result = vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory);
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to allocate vertex buffer memory!");
   }
 
-  // The first three parameters are self-explanatory and the fourth parameter is the offset within the region
-  // of memory. Since this memory is allocated specifically for this the vertex buffer, the offset is simply
-  // 0. If the offset is non-zero, then it is required to be divisible by memRequirements.alignment.
+  // The first three parameters are self-explanatory and the fourth parameter is
+  // the offset within the region of memory. Since this memory is allocated
+  // specifically for this the vertex buffer, the offset is simply 0. If the
+  // offset is non-zero, then it is required to be divisible by
+  // memRequirements.alignment.
   vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
 
-void RLMDevice::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-  // NOTE TO : The implementation may be able to apply memory allocation optimizations.
-  // VK_COMMAND_POOL_CREATE_TRANSIENT_BIT flag should be used during command pool generation in that case.
+void RLMDevice::copyBuffer(
+    VkBuffer srcBuffer,
+    VkBuffer dstBuffer,
+    VkDeviceSize size) {
+  // NOTE TO : The implementation may be able to apply memory allocation
+  // optimizations. VK_COMMAND_POOL_CREATE_TRANSIENT_BIT flag should be used
+  // during command pool generation in that case.
   VkCommandBuffer commandBuffer = beginSingleTimeCommand();
 
   VkBufferCopy copyRegion{};
@@ -539,11 +580,14 @@ void RLMDevice::endSingleTimeCommand(VkCommandBuffer commandBuffer) {
   vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 }
 
-uint32_t RLMDevice::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+uint32_t RLMDevice::findMemoryType(
+    uint32_t typeFilter,
+    VkMemoryPropertyFlags properties) {
   VkPhysicalDeviceMemoryProperties memProperties;
   vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
   for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-    if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+    if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags &
+                                    properties) == properties) {
       return i;
     }
   }

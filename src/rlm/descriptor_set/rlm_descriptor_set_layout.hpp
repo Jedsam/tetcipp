@@ -7,7 +7,7 @@
 
 #include <glm/glm.hpp>
 
-#include "renderer/rlm_device.hpp"
+#include "rlm/rlm_device.hpp"
 
 namespace rlm {
 
@@ -26,12 +26,14 @@ class RLMDescriptorSetLayout {
 
    private:
     RLMDevice &rlmDevice;
-    std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> setLayoutBindings;
+    std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding>
+        setLayoutBindings;
   };
 
   RLMDescriptorSetLayout(
       RLMDevice &rlmDevice,
-      std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> setLayoutBindings);
+      std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding>
+          setLayoutBindings);
   ~RLMDescriptorSetLayout();
 
   VkDescriptorSetLayout getDescriptorSetLayout() { return descriptorSetLayout; }

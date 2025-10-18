@@ -4,8 +4,8 @@
 
 #include <glm/glm.hpp>
 
-#include "renderer/rlm_buffer.hpp"
-#include "renderer/rlm_descriptor_set_layout.hpp"
+#include "rlm/rlm_buffer.hpp"
+#include "rlm_descriptor_set_layout.hpp"
 
 namespace rlm {
 struct UniformBufferObject {

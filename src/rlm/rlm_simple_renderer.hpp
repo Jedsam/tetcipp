@@ -2,16 +2,19 @@
 
 #include <memory>
 
-#include "renderer/rlm_descriptor_set_layout.hpp"
-#include "renderer/rlm_device.hpp"
-#include "renderer/rlm_model.hpp"
-#include "renderer/rlm_pipeline.hpp"
+#include "descriptor_set/rlm_descriptor_set_layout.hpp"
+#include "rlm_device.hpp"
+#include "rlm_model.hpp"
+#include "rlm_pipeline.hpp"
 
 namespace rlm {
 
 class SimpleRenderSystem {
  public:
-  SimpleRenderSystem(RLMDevice &device, VkRenderPass renderPass, RLMDescriptorSetLayout globalLayout);
+  SimpleRenderSystem(
+      RLMDevice &device,
+      VkRenderPass renderPass,
+      RLMDescriptorSetLayout globalLayout);
   ~SimpleRenderSystem();
 
   SimpleRenderSystem(const SimpleRenderSystem &) = delete;
