@@ -31,14 +31,14 @@ struct Register {
 
     size_t size() { return count; }
 
-    void *at(size_t index) {
+    void *at(size_t index) const {
       if (index >= count) {
         return nullptr;
       }
       return static_cast<char *>(data) + index * element_size;
     }
 
-    template <typename Component> Component *at(size_t index) {
+    template <typename Component> Component *atComponent(size_t index) {
       if (index >= count) {
         return nullptr;
       }
@@ -57,16 +57,21 @@ struct Register {
       }
     }
 
-    void pushBack(Column *inputColumn, size_t index) {
+    void pushBack(const Column &inputColumn, size_t index) {
       if (count >= capacity) {
-        data = reallocarray(data, capacity * 2, element_size);
+        void *new_data = reallocarray(data, capacity * 2, element_size);
+        if (new_data == nullptr) {
+          // handle memory error
+          return;
+        }
+        data = new_data;
         capacity *= 2;
       }
-      std::memcpy(at(count), inputColumn->at(index), element_size);
+      std::memcpy(at(count), inputColumn.at(index), element_size);
       count++;
     }
 
-    template <typename Component> void pushBack(Component *component) {
+    template <typename Component> void pushBackComponent(Component *component) {
       if (count >= capacity) {
         data = reallocarray(data, capacity * 2, element_size);
         capacity *= 2;
@@ -277,11 +282,11 @@ struct Register {
       auto &oldType = oldArchetype.type;
       for (int i = 0, j = 0; i < newComponents.size(); i++) {
         if (newType[i] == oldType[j]) {
-          newComponents[i].pushBack(&oldComponents[j], row);
+          newComponents[i].pushBack(oldComponents[j], row);
 
           j++;
         } else {
-          newComponents[i].pushBack<Component>(&component);
+          newComponents[i].pushBackComponent<Component>(&component);
         }
       }
       entities.push_back(oldArchetype.entities[row]);
@@ -311,21 +316,20 @@ struct Register {
 
   template <typename Component> EntityID createEntity(Component component) {
     // Find the id of the entity
-    EntityID currentID;
+    EntityID newEntity;
     if (deletedEntities.empty()) {
-      currentID = nextId;
+      newEntity = nextId;
       nextId++;
     } else {
       // pop the last element and use it
-      currentID = deletedEntities[deletedEntities.size() - 1];
-      currentID = Entity::incrementGen(currentID);
+      newEntity = deletedEntities[deletedEntities.size() - 1];
+      newEntity = Entity::incrementGen(newEntity);
       deletedEntities.pop_back();
     }
 
     // find the archetype if it exists
     auto &edgesMap = baseArchetype.edges;
-    ComponentID &componentID =
-        ComponentIDGenerator::getComponentID<Component>();
+    ComponentID componentID = ComponentIDGenerator::getComponentID<Component>();
     auto it = edgesMap.find(componentID);
     Archetype *newArchetype;
     if (it != edgesMap.end()) {
@@ -355,7 +359,9 @@ struct Register {
     newArchetype->copyValue<Component>(baseArchetype, component, record.row);
 
     // update the EntityIndex map
-    entityIndex[currentID] = record;
+    entityIndex[newEntity] = record;
+
+    return newEntity;
   }
 
   void deleteEntity(EntityID entity) {
@@ -376,8 +382,7 @@ struct Register {
   void addComponent(Component component, EntityID entity) {
     Record &record = entityIndex[entity];
     auto &edgesMap = record.archetype->edges;
-    ComponentID &componentID =
-        ComponentIDGenerator::getComponentID<Component>();
+    ComponentID componentID = ComponentIDGenerator::getComponentID<Component>();
     auto it = edgesMap.find(componentID);
     Archetype *oldArchetype = record.archetype;
     Archetype *newArchetype;
@@ -399,7 +404,7 @@ struct Register {
       oldArchetype->edges.emplace(componentID, ArchetypeEdge{newArchetype});
     }
 
-    newArchetype->copyValue<Component>(oldArchetype, component, record.row);
+    newArchetype->copyValue<Component>(*oldArchetype, component, record.row);
     entityIndex[oldArchetype->swapWithLastElement(record.row)].row = record.row;
     record.archetype = newArchetype;
 

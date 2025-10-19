@@ -65,7 +65,7 @@ void DestroyDebugUtilsMessengerEXT(
   }
 }
 
-Device::Device(RLMWindow &window) : rlmWindow{window} {
+Device::Device(Window &window) : rlmWindow{window} {
   createInstance();
   spdlog::debug("RLMDevice: Instance created\n");
   setupDebugMessenger();

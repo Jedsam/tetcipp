@@ -18,12 +18,12 @@ class Engine {
 
   template <typename Component>
   ecs::EntityID createEntity(Component component) {
-    myRegister.createEntity<Component>(component);
+    return myRegister.createEntity<Component>(component);
   }
 
   template <typename Component>
-  ecs::EntityID addComponent(Component component, ecs::EntityID entity) {
-    myRegister.addComponent<Component>(component, entity);
+  void addComponent(Component component, ecs::EntityID entity) {
+    return myRegister.addComponent<Component>(component, entity);
   }
 
   void
