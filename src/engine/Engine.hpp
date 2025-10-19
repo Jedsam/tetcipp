@@ -31,6 +31,12 @@ class Engine {
     this->renderingSystem = renderingSystem;
   }
 
+  rlm::Renderer &getRenderer() { return rlmCore.getRenderer(); }
+
+  rlm::SimpleRenderSystem &getSimpleRenderSystem() {
+    return rlmCore.getSimpleRenderSystem();
+  }
+
  private:
   std::shared_ptr<engine::system::System> renderingSystem;
   std::vector<system::System> systems;

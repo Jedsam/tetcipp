@@ -1,3 +1,4 @@
+#include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -33,11 +34,13 @@ void Core::init() {
     throw std::runtime_error("Renderer creation was unsuccessful");
   }
 
+  spdlog::debug("Core: RLM objects created successfully");
   auto descriptorSetLayout =
       DescriptorSetLayout::Builder(*rlmDevice)
           .addBinding(
               0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
           .build();
+  spdlog::debug("Core: Descriptor set done");
 
   auto uboSet =
       DescriptorSet::Builder(*rlmDevice)
@@ -46,8 +49,10 @@ void Core::init() {
               sizeof(UniformBufferObject), Renderer::MAX_FRAMES_IN_FLIGHT)
           .build();
 
+  spdlog::debug("Core: UBO set done");
   SimpleRenderSystem simpleRenderSystem{
       *rlmDevice, rlmRenderer->getRenderPass(), *descriptorSetLayout};
+  spdlog::debug("Core: SimpleRenderSystem done");
 }
 
 void Core::beginFrameOperations() {

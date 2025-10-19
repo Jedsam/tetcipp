@@ -5,6 +5,7 @@
 
 #include "device.hpp"
 #include "renderer.hpp"
+#include "rlm/simple_renderer.hpp"
 #include "window.hpp"
 
 // Stands for Renderer Little Machine
@@ -15,8 +16,6 @@ const uint32_t HEIGHT = 900;
 
 class Core {
  public:
-  void run();
-
   Core();
   ~Core();
 
@@ -29,10 +28,15 @@ class Core {
 
   Device &getDevice() { return *rlmDevice; }
 
+  Renderer &getRenderer() { return *rlmRenderer; }
+
+  SimpleRenderSystem &getSimpleRenderSystem() { return *simpleRenderSystem; }
+
  private:
   std::unique_ptr<Window> rlmWindow;
   std::unique_ptr<Device> rlmDevice;
   std::unique_ptr<Renderer> rlmRenderer;
+  std::unique_ptr<SimpleRenderSystem> simpleRenderSystem;
   void init();
 
   void mainLoop();

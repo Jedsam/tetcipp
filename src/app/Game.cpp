@@ -20,7 +20,8 @@ void Game::run() {
 
 void Game::setupRenderer() {
   std::shared_ptr<engine::system::RenderSystem> renderSystem =
-      std::make_shared<engine::system::RenderSystem>();
+      std::make_shared<engine::system::RenderSystem>(
+          myEngine.getRenderer(), myEngine.getSimpleRenderSystem());
   myEngine.setRenderingSystem(renderSystem);
 }
 
