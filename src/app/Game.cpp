@@ -6,12 +6,16 @@
 #include "engine/component/ModelComponent.hpp"
 #include "engine/component/UniformBufferObjectComponent.hpp"
 #include "engine/system/RenderSystem.hpp"
+#include "engine/system/RotationSystem.hpp"
 #include "rlm/model.hpp"
 
 #include "Game.hpp"
 
 namespace app {
-Game::Game() : myEngine() { setupRenderer(); }
+Game::Game() : myEngine() {
+  setupRenderer();
+  setupSystems();
+}
 
 void Game::run() {
   setupScene();
@@ -23,6 +27,10 @@ void Game::setupRenderer() {
       std::make_shared<engine::system::RenderSystem>(
           myEngine.getRenderer(), myEngine.getSimpleRenderSystem());
   myEngine.setRenderingSystem(renderSystem);
+}
+
+void Game::setupSystems() {
+  myEngine.addSystem(std::make_unique<engine::system::RotationSystem>());
 }
 
 void Game::setupScene() {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+#include <utility>
 #include <vector>
 
 #include "ecs/entity.hpp"
@@ -37,9 +39,13 @@ class Engine {
     return rlmCore.getSimpleRenderSystem();
   }
 
+  void addSystem(std::unique_ptr<system::System> system) {
+    systems.push_back(std::move(system));
+  }
+
  private:
   std::shared_ptr<engine::system::System> renderingSystem;
-  std::vector<system::System> systems;
+  std::vector<std::unique_ptr<system::System>> systems;
   rlm::Core rlmCore;
   ecs::Register myRegister;
 };

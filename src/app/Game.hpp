@@ -9,8 +9,9 @@ class Game {
   void run();
 
  private:
-  void setupScene();
   void setupRenderer();
+  void setupSystems();
+  void setupScene();
 
   engine::Engine myEngine;
 };
