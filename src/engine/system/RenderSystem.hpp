@@ -10,7 +10,7 @@
 namespace engine::system {
 class RenderSystem : public engine::system::System {
  public:
-  RenderSystem();
+  RenderSystem() {}
 
   void update(ecs::Register &register_, float deltaTime) override {
     // Iterate over entities with ModelComponent
@@ -18,15 +18,23 @@ class RenderSystem : public engine::system::System {
     for (auto &compArch : components) {
       for (auto &comp : compArch->findComponents<component::ModelComponent>()) {
         // Render logic here
-        simpleRenderSystem.renderGameObjects(
-            rlmRenderer.getCommandBuffer(), *comp.model);
+        simpleRenderSystem->renderGameObjects(
+            rlmRenderer->getCommandBuffer(), *comp.model);
       }
     }
   }
 
+  void setRenderer(rlm::Renderer *rlmRenderer) {
+    this->rlmRenderer = rlmRenderer;
+  }
+
+  void setSimpleRendererSystem(rlm::SimpleRenderSystem *simpleRenderSystem) {
+    this->simpleRenderSystem = simpleRenderSystem;
+  }
+
  private:
-  rlm::Renderer &rlmRenderer;
-  rlm::SimpleRenderSystem &simpleRenderSystem;
+  rlm::Renderer *rlmRenderer;
+  rlm::SimpleRenderSystem *simpleRenderSystem;
 };
 
 }  // namespace engine::system

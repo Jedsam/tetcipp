@@ -4,10 +4,8 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "Game.hpp"
+#include "app/Game.hpp"
 #include "spdlog/sinks/basic_file_sink.h"
-
-namespace app {
 
 void init_logger() {
   try {
@@ -36,7 +34,7 @@ int main() {
   // Initialize logger
   init_logger();
 
-  Game app;
+  app::Game app;
 
   try {
     app.run();
@@ -47,4 +45,3 @@ int main() {
 
   return EXIT_SUCCESS;
 }
-}  // namespace app
