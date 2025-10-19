@@ -13,12 +13,19 @@ namespace rlm {
 const uint32_t WIDTH = 1200;
 const uint32_t HEIGHT = 900;
 
-class Application {
+class Core {
  public:
   void run();
 
-  Application();
-  ~Application();
+  Core();
+  ~Core();
+
+  bool shouldClose() { return !rlmWindow->shouldClose(); }
+
+  void beginFrameOperations();
+  void endFrameOperations();
+
+  void waitForDevice() { vkDeviceWaitIdle(rlmDevice->getDevice()); }
 
   Device &getDevice() { return *rlmDevice; }
 

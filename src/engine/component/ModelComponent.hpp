@@ -4,9 +4,9 @@
 
 #include "rlm/model.hpp"
 
-namespace component {
+namespace engine::component {
 
 struct ModelComponent {
   std::shared_ptr<rlm::Model> model;
 };
-}  // namespace component
+}  // namespace engine::component

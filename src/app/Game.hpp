@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ecs/register.hpp"
 #include "engine/Engine.hpp"
 
 namespace app {
@@ -11,8 +10,8 @@ class Game {
 
  private:
   void setupScene();
+  void setupRenderer();
 
   engine::Engine myEngine;
-  ecs::Register myRegister;
 };
 }  // namespace app

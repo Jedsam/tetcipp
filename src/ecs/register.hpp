@@ -95,6 +95,61 @@ struct Register {
       count--;
     }
 
+    template <typename Component> struct ColumnIterable {
+      Column &column;
+
+      auto begin() const { return column.begin<Component>(); }
+
+      auto end() const { return column.end<Component>(); }
+    };
+
+    template <typename Component> ColumnIterable<Component> iter() {
+      return ColumnIterable<Component>{*this};
+    }
+
+    template <typename Component> struct iterator {
+      using value_type = Component;
+      using pointer = Component *;
+      using reference = Component &;
+
+      explicit iterator(void *ptr) : ptr_(static_cast<Component *>(ptr)) {}
+
+      reference operator*() const { return *ptr_; }
+
+      pointer operator->() const { return ptr_; }
+
+      iterator &operator++() {
+        ptr_++;
+        return *this;
+      }
+
+      iterator operator++(int) {
+        iterator tmp = *this;
+        ++(*this);
+        return tmp;
+      }
+
+      bool operator==(const iterator &other) const {
+        return ptr_ == other.ptr_;
+      }
+
+      bool operator!=(const iterator &other) const {
+        return ptr_ != other.ptr_;
+      }
+
+     private:
+      Component *ptr_;
+    };
+
+    template <typename Component> iterator<Component> begin() {
+      return iterator<Component>(data);
+    }
+
+    template <typename Component> iterator<Component> end() {
+      return iterator<Component>(
+          static_cast<char *>(data) + count * element_size);
+    }
+
    private:
     void *data = nullptr;
     size_t element_size = 0;
@@ -186,6 +241,11 @@ struct Register {
     std::unordered_map<ComponentID, ArchetypeEdge> edges;
 
     size_t size() { return entities.size(); }
+
+    template <typename Component> auto findComponents() {
+      size_t row = type.find(ComponentIDGenerator::getComponentID<Component>());
+      return components[row].iter<Component>();
+    }
 
     EntityID deleteElement(size_t row) {
       for (int i = 0; i < components.size(); i++) {
@@ -412,7 +472,7 @@ struct Register {
 
   // For performance reasons its better to put the component likely to have the
   // least amount of members as first parameter
-  template <typename C, typename... Components> ArchetypeSet findComponents() {
+  template <typename C, typename... Components> ArchetypeSet findArchetypes() {
     ComponentID componentID = ComponentIDGenerator::getComponentID<C>();
     ArchetypeSet resultSet = componentIndex[componentID];
 

@@ -2,15 +2,27 @@
 #include <memory>
 #include <vector>
 
-#include "engine/components/MeshRenderer.hpp"
+#include "ecs/entity.hpp"
+#include "engine/component/ModelComponent.hpp"
+#include "engine/component/UniformBufferObjectComponent.hpp"
+#include "engine/system/RenderSystem.hpp"
 #include "rlm/model.hpp"
 
 #include "Game.hpp"
 
 namespace app {
-Game::Game() : myEngine(), myRegister() {}
+Game::Game() : myEngine() { setupRenderer(); }
 
-void Game::run() { setupScene(); }
+void Game::run() {
+  setupScene();
+  myEngine.run();
+}
+
+void Game::setupRenderer() {
+  std::shared_ptr<engine::system::RenderSystem> renderSystem =
+      std::make_shared<engine::system::RenderSystem>();
+  myEngine.setRenderingSystem(renderSystem);
+}
 
 void Game::setupScene() {
   const std::vector<rlm::Model::Vertex> vertices = {
@@ -23,12 +35,13 @@ void Game::setupScene() {
   rlm::Model::Builder modelBuilder{};
   modelBuilder.vertices = vertices;
   modelBuilder.indices = indices;
-  component::ModelComponent myTriangle{};
-  myTriangle.model =
+  engine::component::ModelComponent myTriangleModel{};
+  myTriangleModel.model =
       std::make_shared<rlm::Model>(myEngine.getDevice(), modelBuilder);
-
-  myRegister.createEntity<component::ModelComponent>(myTriangle);
-
-  RenderSystem renderSystem();
+  ecs::EntityID myTriangle =
+      myEngine.createEntity<engine::component::ModelComponent>(myTriangleModel);
+  engine::component::UniformBufferObject myTrianglePosition{};
+  myEngine.addComponent<engine::component::UniformBufferObject>(
+      myTrianglePosition, myTriangle);
 }
 }  // namespace app
