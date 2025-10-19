@@ -51,8 +51,8 @@ void Core::init() {
                     .build();
 
   spdlog::debug("Core: UBO set done");
-  SimpleRenderSystem simpleRenderSystem{
-      *rlmDevice, rlmRenderer->getRenderPass(), *uboDescriptorSetLayout};
+  simpleRenderSystem = std::make_unique<SimpleRenderSystem>(
+      *rlmDevice, rlmRenderer->getRenderPass(), *uboDescriptorSetLayout);
   spdlog::debug("Core: SimpleRenderSystem done");
 }
 
