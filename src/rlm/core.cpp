@@ -1,3 +1,4 @@
+#include "engine/component/UniformBufferObjectComponent.hpp"
 #include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
@@ -35,23 +36,23 @@ void Core::init() {
   }
 
   spdlog::debug("Core: RLM objects created successfully");
-  auto descriptorSetLayout =
+  auto uboDescriptorSetLayout =
       DescriptorSetLayout::Builder(*rlmDevice)
           .addBinding(
               0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
           .build();
   spdlog::debug("Core: Descriptor set done");
 
-  auto uboSet =
-      DescriptorSet::Builder(*rlmDevice)
-          .addDescriptorSetLayout(*descriptorSetLayout)
-          .createBufferMemory(
-              sizeof(UniformBufferObject), Renderer::MAX_FRAMES_IN_FLIGHT)
-          .build();
+  auto uboSet = DescriptorSet::Builder(*rlmDevice)
+                    .addDescriptorSetLayout(*uboDescriptorSetLayout)
+                    .createBufferMemory(
+                        sizeof(engine::component::UniformBufferObject),
+                        Renderer::MAX_FRAMES_IN_FLIGHT)
+                    .build();
 
   spdlog::debug("Core: UBO set done");
   SimpleRenderSystem simpleRenderSystem{
-      *rlmDevice, rlmRenderer->getRenderPass(), *descriptorSetLayout};
+      *rlmDevice, rlmRenderer->getRenderPass(), *uboDescriptorSetLayout};
   spdlog::debug("Core: SimpleRenderSystem done");
 }
 

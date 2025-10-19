@@ -28,6 +28,10 @@ void Engine::run() {
 
     frameCount++;
 
+    for (auto &system : systems) {
+      system.update(myRegister, elapsed);
+    }
+
     rlmCore.beginFrameOperations();
 
     renderingSystem->update(myRegister, elapsed);
