@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include <glm/glm.hpp>
 
@@ -36,10 +37,12 @@ class DescriptorSetLayout {
           setLayoutBindings);
   ~DescriptorSetLayout();
 
-  VkDescriptorSetLayout getDescriptorSetLayout() { return descriptorSetLayout; }
+  std::vector<VkDescriptorSetLayout> &getDescriptorSetLayout() {
+    return descriptorSetLayout;
+  }
 
  private:
-  VkDescriptorSetLayout descriptorSetLayout;
+  std::vector<VkDescriptorSetLayout> descriptorSetLayout;
   Device &rlmDevice;
   std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> setLayoutBindings;
 };

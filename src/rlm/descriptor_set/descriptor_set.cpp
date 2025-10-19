@@ -3,6 +3,8 @@
 #include <vector>
 
 #include "descriptor_set.hpp"
+#include "rlm/descriptor_set/descriptor_set_layout.hpp"
+#include "rlm/descriptor_set/descriptor_set_pool.hpp"
 
 namespace rlm {
 
@@ -35,8 +37,19 @@ DescriptorSet::Builder &DescriptorSet::Builder::createBufferMemory(
   return *this;
 }
 
+DescriptorSet::Builder &DescriptorSet::Builder::allocatePool(
+    DescriptorSetPool &descriptorSetPool,
+    uint32_t framesInFlight) {
+  VkDescriptorSetAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocInfo.descriptorPool = descriptorSetPool.getDescriptorPool();
+  allocInfo.descriptorSetCount = framesInFlight;
+  allocInfo.pSetLayouts = descriptorSetLayout.data();
+}
+
 std::unique_ptr<DescriptorSet> DescriptorSet::Builder::build() {
-  return std::make_unique<DescriptorSet>();
+  return std::make_unique<DescriptorSet>(
+      descriptorSetPool, descriptorSetLayout);
 }
 
 // Descriptor Set
