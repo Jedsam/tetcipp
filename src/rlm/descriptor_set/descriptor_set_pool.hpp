@@ -1,17 +1,14 @@
 
 #pragma once
 
-#include <cstdint>
 #include <vulkan/vulkan_core.h>
 
+#include <cstdint>
 #include <memory>
-#include <unordered_map>
-
 #include <vector>
 
 #include <glm/glm.hpp>
 
-#include "rlm/descriptor_set/descriptor_set_layout.hpp"
 #include "rlm/device.hpp"
 
 namespace rlm {
@@ -22,10 +19,10 @@ class DescriptorSetPool {
    public:
     explicit Builder(Device &rlmDevice);
 
-    Builder &setMaxSets(VkDescriptorType descriptorType, uint32_t count);
+    Builder &addPoolSize(VkDescriptorType descriptorType, uint32_t count);
     Builder &setPoolFlags(VkDescriptorPoolCreateFlags flags);
     Builder &setMaxSets(uint32_t count);
-    std::unique_ptr<DescriptorSetPool> build() const;
+    std::unique_ptr<DescriptorSetPool> build();
 
    private:
     Device &lveDevice;
@@ -38,16 +35,16 @@ class DescriptorSetPool {
       Device &rlmDevice,
       uint32_t maxSets,
       VkDescriptorPoolCreateFlags poolFlags,
-      const std::vector<VkDescriptorPoolSize> &poolSizes);
+      std::vector<VkDescriptorPoolSize> &poolSizes);
   ~DescriptorSetPool();
-  DescriptorSetPool(const DescriptorSetPool &) = delete;
-  DescriptorSetPool &operator=(const DescriptorSetPool &) = delete;
 
   bool allocateDescriptor(
       const VkDescriptorSetLayout descriptorSetLayout,
       VkDescriptorSet &descriptor) const;
 
   void freeDescriptors(std::vector<VkDescriptorSet> &descriptors) const;
+
+  Device &getRLMDevice() { return rlmDevice; }
 
   void resetPool();
 

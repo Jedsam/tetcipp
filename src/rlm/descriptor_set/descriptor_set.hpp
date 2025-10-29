@@ -1,6 +1,9 @@
 #pragma once
 
+#include <vulkan/vulkan_core.h>
+
 #include <memory>
+#include <vector>
 
 #include <glm/glm.hpp>
 
@@ -22,16 +25,35 @@ class DescriptorSet {
     explicit Builder(Device &rlmDevice);
     ~Builder();
 
-    Builder &addDescriptorSetLayout(DescriptorSetLayout descriptorSetLayout);
+    Builder &addDescriptorSetLayout(
+        std::unique_ptr<DescriptorSetLayout> descriptorSetLayout);
+    Builder &
+    addDescriptorSetPool(std::unique_ptr<DescriptorSetPool> descriptorSetPool);
     Builder &createBufferMemory(uint32_t bufferSize, uint32_t bufferCount);
-    Builder &allocatePool(DescriptorSetPool descriptorSetPool);
     std::unique_ptr<DescriptorSet> build();
 
    private:
     Device &rlmDevice;
     std::vector<std::unique_ptr<Buffer>> buffers;
+    std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
+    std::unique_ptr<DescriptorSetPool> descriptorSetPool;
   };
 
+  std::unique_ptr<DescriptorSetLayout> &getDescriptorSetLayout() {
+    return descriptorSetLayout;
+  }
+
+  DescriptorSet(
+      Device &rlmDevice,
+      std::vector<std::unique_ptr<Buffer>> buffers,
+      std::unique_ptr<DescriptorSetPool> pool,
+      std::unique_ptr<DescriptorSetLayout> layout);
+
  private:
+  Device &rlmDevice;
+  std::vector<std::unique_ptr<Buffer>> buffers;
+  std::vector<VkDescriptorSet> descriptorSets;
+  std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
+  std::unique_ptr<DescriptorSetPool> descriptorSetPool;
 };
 }  // namespace rlm

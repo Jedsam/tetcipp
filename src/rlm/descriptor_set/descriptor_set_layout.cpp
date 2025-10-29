@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdint>
 #include <iterator>
 #include <memory>
 #include <unordered_map>
@@ -28,16 +29,24 @@ DescriptorSetLayout::Builder &DescriptorSetLayout::Builder::addBinding(
   return *this;
 }
 
+DescriptorSetLayout::Builder &
+DescriptorSetLayout::Builder::setLayoutCount(size_t layoutCount) {
+  this->layoutCount = layoutCount;
+  return *this;
+}
+
 std::unique_ptr<DescriptorSetLayout>
 DescriptorSetLayout::Builder::build() const {
-  return std::make_unique<DescriptorSetLayout>(rlmDevice, setLayoutBindings);
+  return std::make_unique<DescriptorSetLayout>(
+      rlmDevice, setLayoutBindings, layoutCount);
 }
 
 // DescriptorSetLayout
 DescriptorSetLayout::DescriptorSetLayout(
     Device &rlmDevice,
     std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding>
-        setLayoutBindings)
+        setLayoutBindings,
+    size_t setLayoutCount)
     : rlmDevice{rlmDevice}, setLayoutBindings{setLayoutBindings} {
   std::vector<VkDescriptorSetLayoutBinding> bindingsVector;
 
@@ -52,15 +61,22 @@ DescriptorSetLayout::DescriptorSetLayout(
   layoutInfo.bindingCount = static_cast<uint32_t>(bindingsVector.size());
   layoutInfo.pBindings = bindingsVector.data();
 
+  VkDescriptorSetLayout descriptorSetLayout;
   if (vkCreateDescriptorSetLayout(
           rlmDevice.getDevice(), &layoutInfo, nullptr, &descriptorSetLayout) !=
       VK_SUCCESS) {
     throw std::runtime_error("failed to create descriptor set layout!");
   }
+
+  // Copy the setlayouts
+  descriptorSetLayouts.clear();
+  descriptorSetLayouts.insert(
+      descriptorSetLayouts.begin(), setLayoutCount, descriptorSetLayout);
 }
 
 DescriptorSetLayout::~DescriptorSetLayout() {
+  // It might be necessary to delete all of them instead of a single one
   vkDestroyDescriptorSetLayout(
-      rlmDevice.getDevice(), descriptorSetLayout, nullptr);
+      rlmDevice.getDevice(), descriptorSetLayouts.at(0), nullptr);
 }
 }  // namespace rlm

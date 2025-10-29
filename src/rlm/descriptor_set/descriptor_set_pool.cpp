@@ -5,7 +5,7 @@
 
 namespace rlm {
 // Builder
-DescriptorSetPool::Builder &DescriptorSetPool::Builder::setMaxSets(
+DescriptorSetPool::Builder &DescriptorSetPool::Builder::addPoolSize(
     VkDescriptorType descriptorType,
     uint32_t count) {
   poolSizes.push_back({descriptorType, count});
@@ -24,7 +24,7 @@ DescriptorSetPool::Builder::setMaxSets(uint32_t count) {
   return *this;
 }
 
-std::unique_ptr<DescriptorSetPool> DescriptorSetPool::Builder::build() const {
+std::unique_ptr<DescriptorSetPool> DescriptorSetPool::Builder::build() {
   return std::make_unique<DescriptorSetPool>(
       lveDevice, maxSets, poolFlags, poolSizes);
 }
@@ -35,8 +35,12 @@ DescriptorSetPool::DescriptorSetPool(
     Device &rlmDevice,
     uint32_t maxSets,
     VkDescriptorPoolCreateFlags poolFlags,
-    const std::vector<VkDescriptorPoolSize> &poolSizes)
+    std::vector<VkDescriptorPoolSize> &poolSizes)
     : rlmDevice(rlmDevice) {
+  // The structure has an optional flag similar to command pools that determines
+  // if individual descriptor sets can be freed or not:
+  // VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT. We're not going to touch
+  // the descriptor set after creating it, so we don't need this flag.
   VkDescriptorPoolCreateInfo descriptorPoolInfo{
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
       .flags = poolFlags,

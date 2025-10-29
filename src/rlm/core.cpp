@@ -1,4 +1,5 @@
-#include "engine/component/UniformBufferObjectComponent.hpp"
+#include "rlm/descriptor_set/descriptor_set_writer.hpp"
+#include <algorithm>
 #include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
@@ -6,10 +7,12 @@
 
 #include <cassert>
 #include <memory>
+#include <utility>
 
 #include "core.hpp"
 #include "descriptor_set/descriptor_set.hpp"
 #include "descriptor_set/descriptor_set_layout.hpp"
+#include "engine/component/UniformBufferObjectComponent.hpp"
 #include "renderer.hpp"
 #include "simple_renderer.hpp"
 
@@ -40,20 +43,35 @@ void Core::init() {
       DescriptorSetLayout::Builder(*rlmDevice)
           .addBinding(
               0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+          .setLayoutCount(Renderer::MAX_FRAMES_IN_FLIGHT)
           .build();
-  spdlog::debug("Core: Descriptor set done");
+  spdlog::debug("Core: Ubo descriptor set layout done");
+
+  auto uboDescriptorSetPool =
+      DescriptorSetPool::Builder(*rlmDevice)
+          .setMaxSets(Renderer::MAX_FRAMES_IN_FLIGHT)
+          .addPoolSize(
+              VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Renderer::MAX_FRAMES_IN_FLIGHT)
+          .build();
+  spdlog::debug("Core: Ubo descriptor set pool done");
 
   auto uboSet = DescriptorSet::Builder(*rlmDevice)
-                    .addDescriptorSetLayout(*uboDescriptorSetLayout)
+                    .addDescriptorSetLayout(std::move(uboDescriptorSetLayout))
+                    .addDescriptorSetPool(std::move(uboDescriptorSetPool))
                     .createBufferMemory(
                         sizeof(engine::component::UniformBufferObject),
                         Renderer::MAX_FRAMES_IN_FLIGHT)
                     .build();
 
-  spdlog::debug("Core: UBO set done");
-  simpleRenderSystem = std::make_unique<SimpleRenderSystem>(
-      *rlmDevice, rlmRenderer->getRenderPass(), *uboDescriptorSetLayout);
-  spdlog::debug("Core: SimpleRenderSystem done");
+  DescriptorSetWriter(uboSet, uboDescriptorSetPool).writeBuffer(0).build();
+}
+
+spdlog::debug("Core: UBO set done");
+simpleRenderSystem = std::make_unique<SimpleRenderSystem>(
+    *rlmDevice,
+    rlmRenderer->getRenderPass(),
+    *uboSet->getDescriptorSetLayout());
+spdlog::debug("Core: SimpleRenderSystem done");
 }
 
 void Core::beginFrameOperations() {
