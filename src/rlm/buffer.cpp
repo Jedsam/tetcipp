@@ -47,4 +47,14 @@ void Buffer::writeToBuffer(
     VkDeviceSize offset) {
   memcpy(mappedData, data, reinterpret_cast<size_t>(bufferSize));
 }
+
+VkDescriptorBufferInfo
+Buffer::descriptorInfo(VkDeviceSize size, VkDeviceSize offset) {
+  return VkDescriptorBufferInfo{
+      buffer,
+      offset,
+      size,
+  };
+}
+
 }  // namespace rlm

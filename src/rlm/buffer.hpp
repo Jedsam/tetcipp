@@ -18,6 +18,10 @@ class Buffer {
   ~Buffer();
 
   void mapMemory(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
+
+  VkDescriptorBufferInfo
+  descriptorInfo(VkDeviceSize size = VK_WHOLE_SIZE, VkDeviceSize offset = 0);
+
   void writeToBuffer(
       const void *data,
       VkDeviceSize size = VK_WHOLE_SIZE,

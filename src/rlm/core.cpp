@@ -1,5 +1,3 @@
-#include "rlm/descriptor_set/descriptor_set_writer.hpp"
-#include <algorithm>
 #include <spdlog/spdlog.h>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
@@ -12,8 +10,10 @@
 #include "core.hpp"
 #include "descriptor_set/descriptor_set.hpp"
 #include "descriptor_set/descriptor_set_layout.hpp"
+#include "descriptor_set/descriptor_set_writer.hpp"
 #include "engine/component/UniformBufferObjectComponent.hpp"
 #include "renderer.hpp"
+#include "rlm/descriptor_set/descriptor_set_writer.hpp"
 #include "simple_renderer.hpp"
 
 namespace rlm {
@@ -63,15 +63,14 @@ void Core::init() {
                         Renderer::MAX_FRAMES_IN_FLIGHT)
                     .build();
 
-  DescriptorSetWriter(uboSet, uboDescriptorSetPool).writeBuffer(0).build();
-}
+  DescriptorSetWriter(uboSet.get()).writeBuffer(0).build();
 
-spdlog::debug("Core: UBO set done");
-simpleRenderSystem = std::make_unique<SimpleRenderSystem>(
-    *rlmDevice,
-    rlmRenderer->getRenderPass(),
-    *uboSet->getDescriptorSetLayout());
-spdlog::debug("Core: SimpleRenderSystem done");
+  spdlog::debug("Core: UBO set done");
+  simpleRenderSystem = std::make_unique<SimpleRenderSystem>(
+      *rlmDevice,
+      rlmRenderer->getRenderPass(),
+      *uboSet->getDescriptorSetLayout());
+  spdlog::debug("Core: SimpleRenderSystem done");
 }
 
 void Core::beginFrameOperations() {

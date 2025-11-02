@@ -43,6 +43,22 @@ class DescriptorSet {
     return descriptorSetLayout;
   }
 
+  std::unique_ptr<DescriptorSetPool> &getDescriptorSetPool() {
+    return descriptorSetPool;
+  }
+
+  std::vector<std::unique_ptr<Buffer>> &getDescriptorBuffers() {
+    return buffers;
+  }
+
+  std::vector<VkDescriptorSet> &getDescriptorSets() { return descriptorSets; }
+
+  void bindDescriptorSets(
+      VkCommandBuffer &commandBuffer,
+      VkPipelineBindPoint pipelineBindPoint,
+      uint32_t setNumber,
+      VkPipelineLayout &layout);
+
   DescriptorSet(
       Device &rlmDevice,
       std::vector<std::unique_ptr<Buffer>> buffers,

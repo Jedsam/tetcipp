@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rlm/descriptor_set/descriptor_set.hpp"
 #include "rlm/descriptor_set/descriptor_set_layout.hpp"
 #include "rlm/descriptor_set/descriptor_set_pool.hpp"
 #include <vulkan/vulkan_core.h>
@@ -10,19 +11,19 @@ namespace rlm {
 
 class DescriptorSetWriter {
  public:
-  DescriptorSetWriter(DescriptorSetLayout &setLayout, DescriptorSetPool &pool);
+  DescriptorSetWriter(DescriptorSet *descriptorSet);
 
-  DescriptorSetWriter &
-  writeBuffer(uint32_t binding, VkDescriptorBufferInfo *bufferInfo);
-  DescriptorSetWriter &
-  writeImage(uint32_t binding, VkDescriptorImageInfo *imageInfo);
+  DescriptorSetWriter &writeBuffer(uint32_t binding);
+  // DescriptorSetWriter &
+  // writeImage(uint32_t binding, VkDescriptorImageInfo *imageInfo);
 
-  bool build(VkDescriptorSet &set);
+  bool build();
   void overwrite(VkDescriptorSet &set);
 
  private:
-  DescriptorSetLayout &setLayout;
-  DescriptorSetPool &pool;
+  DescriptorSet *descriptorSet;
+  DescriptorSetPool *descriptorSetPool;
+  DescriptorSetLayout *descriptorSetLayout;
   std::vector<VkWriteDescriptorSet> writes;
 };
 }  // namespace rlm

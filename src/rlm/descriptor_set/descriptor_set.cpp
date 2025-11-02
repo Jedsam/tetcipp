@@ -76,4 +76,20 @@ DescriptorSet::DescriptorSet(
     throw std::runtime_error("failed to allocate descriptor sets!");
   }
 }
+
+void DescriptorSet::bindDescriptorSets(
+    VkCommandBuffer &commandBuffer,
+    VkPipelineBindPoint pipelineBindPoint,
+    uint32_t setNumber,
+    VkPipelineLayout &layout) {
+  vkCmdBindDescriptorSets(
+      commandBuffer,
+      pipelineBindPoint,
+      layout,
+      0,
+      1,
+      &descriptorSets[setNumber],
+      0,
+      nullptr);
+}
 }  // namespace rlm
