@@ -80,19 +80,20 @@ DescriptorSet::DescriptorSet(
     : rlmDevice(rlmDevice), buffers(std::move(buffers)),
       descriptorSetPool(std::move(pool)),
       descriptorSetLayout(std::move(layout)) {
-  VkDescriptorSetAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  allocInfo.descriptorPool = descriptorSetPool->getDescriptorPool();
-  allocInfo.descriptorSetCount =
-      descriptorSetLayout->getDescriptorSetLayout().size();
-  allocInfo.pSetLayouts = descriptorSetLayout->getDescriptorSetLayout().data();
-
-  descriptorSets.resize(descriptorSetLayout->getDescriptorSetLayout().size());
-  auto result = vkAllocateDescriptorSets(
-      rlmDevice.getDevice(), &allocInfo, descriptorSets.data());
-  if (result != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate descriptor sets!");
-  }
+  // VkDescriptorSetAllocateInfo allocInfo{};
+  // allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  // allocInfo.descriptorPool = descriptorSetPool->getDescriptorPool();
+  // allocInfo.descriptorSetCount =
+  //     descriptorSetLayout->getDescriptorSetLayout().size();
+  // allocInfo.pSetLayouts =
+  // descriptorSetLayout->getDescriptorSetLayout().data();
+  //
+  // descriptorSets.resize(descriptorSetLayout->getDescriptorSetLayout().size());
+  // auto result = vkAllocateDescriptorSets(
+  //     rlmDevice.getDevice(), &allocInfo, descriptorSets.data());
+  // if (result != VK_SUCCESS) {
+  //   throw std::runtime_error("failed to allocate descriptor sets!");
+  // }
 }
 
 void DescriptorSet::bindDescriptorSets(

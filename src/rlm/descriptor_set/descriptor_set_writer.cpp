@@ -10,7 +10,10 @@ namespace rlm {
 DescriptorSetWriter::DescriptorSetWriter(DescriptorSet &descriptorSet)
     : descriptorSet{descriptorSet},
       descriptorSetLayout{*descriptorSet.getDescriptorSetLayout()},
-      descriptorSetPool{*descriptorSet.getDescriptorSetPool()} {}
+      descriptorSetPool{*descriptorSet.getDescriptorSetPool()} {
+  auto &buffers = descriptorSet.getDescriptorBuffers();
+  writes.resize(buffers.size());
+}
 
 DescriptorSetWriter &DescriptorSetWriter::writeBuffer(uint32_t binding) {
   assert(
@@ -39,7 +42,7 @@ DescriptorSetWriter &DescriptorSetWriter::writeBuffer(uint32_t binding) {
     write.pBufferInfo = &bufferInfo;
     write.pTexelBufferView = nullptr;
 
-    writes.push_back(write);
+    writes[i].push_back(write);
   }
 
   return *this;
@@ -81,15 +84,17 @@ bool DescriptorSetWriter::build() {
 }
 
 void DescriptorSetWriter::overwrite(VkDescriptorSet &set) {
-  for (auto &write : writes) {
-    write.dstSet = set;
+  for (int i = 0; i < writes.size(); i++) {
+    for (auto &write : writes) {
+      write[i].dstSet = set;
+    }
+    vkUpdateDescriptorSets(
+        descriptorSetPool.getRLMDevice().getDevice(),
+        writes[i].size(),
+        writes[i].data(),
+        0,
+        nullptr);
   }
-  vkUpdateDescriptorSets(
-      descriptorSetPool.getRLMDevice().getDevice(),
-      writes.size(),
-      writes.data(),
-      0,
-      nullptr);
 }
 
 }  // namespace rlm

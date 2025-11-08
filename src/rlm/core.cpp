@@ -63,10 +63,11 @@ void Core::init() {
                         sizeof(engine::component::UniformBufferObject),
                         Renderer::MAX_FRAMES_IN_FLIGHT)
                     .build();
+  spdlog::debug("Core: Ubo descriptor set done");
 
   bool result = DescriptorSetWriter(*uboSet).writeBuffer(0).build();
 
-  spdlog::debug("Core: UBO set done");
+  spdlog::debug("Core: UBO set fully done");
   simpleRenderSystem = std::make_unique<SimpleRenderSystem>(
       *rlmDevice,
       rlmRenderer->getRenderPass(),
