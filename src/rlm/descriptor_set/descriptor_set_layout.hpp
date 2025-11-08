@@ -49,6 +49,7 @@ class DescriptorSetLayout {
   Device &rlmDevice;
   std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding> setLayoutBindings;
 
+  friend class DescriptorSet;
   friend class DescriptorSetWriter;
 };
 }  // namespace rlm

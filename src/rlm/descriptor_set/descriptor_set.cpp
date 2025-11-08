@@ -6,6 +6,7 @@
 #include "descriptor_set.hpp"
 #include "rlm/descriptor_set/descriptor_set_layout.hpp"
 #include "rlm/descriptor_set/descriptor_set_pool.hpp"
+#include "rlm/descriptor_set/descriptor_set_writer.hpp"
 
 namespace rlm {
 
@@ -23,6 +24,23 @@ DescriptorSet::Builder &DescriptorSet::Builder::addDescriptorSetLayout(
 DescriptorSet::Builder &DescriptorSet::Builder::addDescriptorSetPool(
     std::unique_ptr<DescriptorSetPool> descriptorSetPool) {
   this->descriptorSetPool = std::move(descriptorSetPool);
+  return *this;
+}
+
+DescriptorSet::Builder &DescriptorSet::Builder::allocateDescriptorSets() {
+  VkDescriptorSetAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocInfo.descriptorPool = descriptorSetPool->getDescriptorPool();
+  allocInfo.descriptorSetCount =
+      descriptorSetLayout->getDescriptorSetLayout().size();
+  allocInfo.pSetLayouts = descriptorSetLayout->getDescriptorSetLayout().data();
+
+  descriptorSets.resize(descriptorSetLayout->getDescriptorSetLayout().size());
+  auto result = vkAllocateDescriptorSets(
+      rlmDevice.getDevice(), &allocInfo, descriptorSets.data());
+  if (result != VK_SUCCESS) {
+    throw std::runtime_error("failed to allocate descriptor sets!");
+  }
   return *this;
 }
 

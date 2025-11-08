@@ -25,7 +25,7 @@ class DescriptorSetPool {
     std::unique_ptr<DescriptorSetPool> build();
 
    private:
-    Device &lveDevice;
+    Device &rlmDevice;
     std::vector<VkDescriptorPoolSize> poolSizes{};
     uint32_t maxSets = 1000;
     VkDescriptorPoolCreateFlags poolFlags = 0;
@@ -54,6 +54,6 @@ class DescriptorSetPool {
   Device &rlmDevice;
   VkDescriptorPool descriptorPool;
 
-  friend class LveDescriptorWriter;
+  friend class DescriptorWriter;
 };
 }  // namespace rlm

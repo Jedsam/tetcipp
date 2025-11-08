@@ -5,6 +5,9 @@
 
 namespace rlm {
 // Builder
+
+DescriptorSetPool::Builder::Builder(Device &rlmDevice) : rlmDevice{rlmDevice} {}
+
 DescriptorSetPool::Builder &DescriptorSetPool::Builder::addPoolSize(
     VkDescriptorType descriptorType,
     uint32_t count) {
@@ -26,7 +29,7 @@ DescriptorSetPool::Builder::setMaxSets(uint32_t count) {
 
 std::unique_ptr<DescriptorSetPool> DescriptorSetPool::Builder::build() {
   return std::make_unique<DescriptorSetPool>(
-      lveDevice, maxSets, poolFlags, poolSizes);
+      rlmDevice, maxSets, poolFlags, poolSizes);
 }
 
 // Descriptor Set Pool
@@ -54,5 +57,9 @@ DescriptorSetPool::DescriptorSetPool(
   if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to create descriptor pool!");
   }
+}
+
+DescriptorSetPool::~DescriptorSetPool() {
+  vkDestroyDescriptorPool(rlmDevice.getDevice(), descriptorPool, nullptr);
 }
 }  // namespace rlm

@@ -7,24 +7,24 @@
 
 namespace rlm {
 
-DescriptorSetWriter::DescriptorSetWriter(DescriptorSet *descriptorSet)
+DescriptorSetWriter::DescriptorSetWriter(DescriptorSet &descriptorSet)
     : descriptorSet{descriptorSet},
-      descriptorSetLayout{descriptorSet->getDescriptorSetLayout().get()},
-      descriptorSetPool{descriptorSet->getDescriptorSetPool().get()} {}
+      descriptorSetLayout{*descriptorSet.getDescriptorSetLayout()},
+      descriptorSetPool{*descriptorSet.getDescriptorSetPool()} {}
 
 DescriptorSetWriter &DescriptorSetWriter::writeBuffer(uint32_t binding) {
   assert(
-      descriptorSetLayout->setLayoutBindings.count(binding) == 1 &&
+      descriptorSetLayout.setLayoutBindings.count(binding) == 1 &&
       "Layout does not contain specified binding");
 
-  auto &bindingDescription = descriptorSetLayout->setLayoutBindings[binding];
+  auto &bindingDescription = descriptorSetLayout.setLayoutBindings[binding];
 
   assert(
       bindingDescription.descriptorCount == 1 &&
       "Binding single descriptor info, but binding expects multiple");
 
-  auto &buffers = descriptorSet->getDescriptorBuffers();
-  auto &sets = descriptorSet->getDescriptorSets();
+  auto &buffers = descriptorSet.getDescriptorBuffers();
+  auto &sets = descriptorSet.getDescriptorSets();
 
   for (int i = 0; i < buffers.size(); i++) {
     auto bufferInfo = buffers[i]->descriptorInfo();
@@ -72,14 +72,9 @@ DescriptorSetWriter &DescriptorSetWriter::writeBuffer(uint32_t binding) {
 bool DescriptorSetWriter::build() {
   // VkDescriptorSet &set
   std::vector<VkDescriptorSet> descriptorSets =
-      descriptorSet->getDescriptorSets();
+      descriptorSet.getDescriptorSets();
   for (int i = 0; i < descriptorSets.size(); i++) {
     auto currentSet = descriptorSets[i];
-    bool success = descriptorSetPool->allocateDescriptor(
-        descriptorSetLayout->getDescriptorSetLayout().at(0), currentSet);
-    if (!success) {
-      return false;
-    }
     overwrite(currentSet);
   }
   return true;
@@ -90,7 +85,7 @@ void DescriptorSetWriter::overwrite(VkDescriptorSet &set) {
     write.dstSet = set;
   }
   vkUpdateDescriptorSets(
-      descriptorSetPool->getRLMDevice().getDevice(),
+      descriptorSetPool.getRLMDevice().getDevice(),
       writes.size(),
       writes.data(),
       0,

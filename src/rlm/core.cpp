@@ -58,12 +58,13 @@ void Core::init() {
   auto uboSet = DescriptorSet::Builder(*rlmDevice)
                     .addDescriptorSetLayout(std::move(uboDescriptorSetLayout))
                     .addDescriptorSetPool(std::move(uboDescriptorSetPool))
+                    .allocateDescriptorSets()
                     .createBufferMemory(
                         sizeof(engine::component::UniformBufferObject),
                         Renderer::MAX_FRAMES_IN_FLIGHT)
                     .build();
 
-  DescriptorSetWriter(uboSet.get()).writeBuffer(0).build();
+  bool result = DescriptorSetWriter(*uboSet).writeBuffer(0).build();
 
   spdlog::debug("Core: UBO set done");
   simpleRenderSystem = std::make_unique<SimpleRenderSystem>(

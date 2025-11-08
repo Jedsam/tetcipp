@@ -5,13 +5,17 @@
 #include "rlm/descriptor_set/descriptor_set_pool.hpp"
 #include <vulkan/vulkan_core.h>
 
+#include <vector>
+
 #include <glm/glm.hpp>
 
 namespace rlm {
 
 class DescriptorSetWriter {
  public:
-  DescriptorSetWriter(DescriptorSet *descriptorSet);
+  explicit DescriptorSetWriter(DescriptorSet &descriptorSet);
+  DescriptorSetWriter &operator=(const DescriptorSetWriter &) = delete;
+  DescriptorSetWriter &operator=(DescriptorSetWriter &&) = delete;
 
   DescriptorSetWriter &writeBuffer(uint32_t binding);
   // DescriptorSetWriter &
@@ -21,9 +25,9 @@ class DescriptorSetWriter {
   void overwrite(VkDescriptorSet &set);
 
  private:
-  DescriptorSet *descriptorSet;
-  DescriptorSetPool *descriptorSetPool;
-  DescriptorSetLayout *descriptorSetLayout;
+  DescriptorSet &descriptorSet;
+  DescriptorSetPool &descriptorSetPool;
+  DescriptorSetLayout &descriptorSetLayout;
   std::vector<VkWriteDescriptorSet> writes;
 };
 }  // namespace rlm

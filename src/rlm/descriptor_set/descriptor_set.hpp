@@ -7,8 +7,8 @@
 
 #include <glm/glm.hpp>
 
-#include "descriptor_set_layout.hpp"
 #include "rlm/buffer.hpp"
+#include "rlm/descriptor_set/descriptor_set_layout.hpp"
 #include "rlm/descriptor_set/descriptor_set_pool.hpp"
 
 namespace rlm {
@@ -29,11 +29,13 @@ class DescriptorSet {
         std::unique_ptr<DescriptorSetLayout> descriptorSetLayout);
     Builder &
     addDescriptorSetPool(std::unique_ptr<DescriptorSetPool> descriptorSetPool);
+    Builder &allocateDescriptorSets();
     Builder &createBufferMemory(uint32_t bufferSize, uint32_t bufferCount);
     std::unique_ptr<DescriptorSet> build();
 
    private:
     Device &rlmDevice;
+    std::vector<VkDescriptorSet> descriptorSets;
     std::vector<std::unique_ptr<Buffer>> buffers;
     std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
     std::unique_ptr<DescriptorSetPool> descriptorSetPool;
