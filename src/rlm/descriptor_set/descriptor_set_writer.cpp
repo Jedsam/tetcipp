@@ -13,6 +13,7 @@ DescriptorSetWriter::DescriptorSetWriter(DescriptorSet &descriptorSet)
       descriptorSetPool{*descriptorSet.getDescriptorSetPool()} {
   auto &buffers = descriptorSet.getDescriptorBuffers();
   writes.resize(buffers.size());
+  bufferInfos.resize(buffers.size());
 }
 
 DescriptorSetWriter &DescriptorSetWriter::writeBuffer(uint32_t binding) {
@@ -31,15 +32,17 @@ DescriptorSetWriter &DescriptorSetWriter::writeBuffer(uint32_t binding) {
 
   for (int i = 0; i < buffers.size(); i++) {
     auto bufferInfo = buffers[i]->descriptorInfo();
+    bufferInfos[i].push_back(bufferInfo);
+
     VkWriteDescriptorSet write{};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstSet = sets[i];
     write.dstBinding = binding;
-    write.dstArrayElement = binding;
+    write.dstArrayElement = 0;
     write.descriptorCount = 1;
     write.descriptorType = bindingDescription.descriptorType;
     write.pImageInfo = nullptr;
-    write.pBufferInfo = &bufferInfo;
+    write.pBufferInfo = &bufferInfos[i].back();
     write.pTexelBufferView = nullptr;
 
     writes[i].push_back(write);
@@ -85,8 +88,8 @@ bool DescriptorSetWriter::build() {
 
 void DescriptorSetWriter::overwrite(VkDescriptorSet &set) {
   for (int i = 0; i < writes.size(); i++) {
-    for (auto &write : writes) {
-      write[i].dstSet = set;
+    for (auto &write : writes[i]) {
+      write.dstSet = set;
     }
     vkUpdateDescriptorSets(
         descriptorSetPool.getRLMDevice().getDevice(),

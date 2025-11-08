@@ -52,6 +52,7 @@ void Core::init() {
           .setMaxSets(Renderer::MAX_FRAMES_IN_FLIGHT)
           .addPoolSize(
               VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, Renderer::MAX_FRAMES_IN_FLIGHT)
+          .setPoolFlags(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)
           .build();
   spdlog::debug("Core: Ubo descriptor set pool done");
 

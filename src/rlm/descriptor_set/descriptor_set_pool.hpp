@@ -54,6 +54,6 @@ class DescriptorSetPool {
   Device &rlmDevice;
   VkDescriptorPool descriptorPool;
 
-  friend class DescriptorWriter;
+  friend class LveDescriptorWriter;
 };
 }  // namespace rlm

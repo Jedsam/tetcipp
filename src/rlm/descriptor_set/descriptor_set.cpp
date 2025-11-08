@@ -6,7 +6,6 @@
 #include "descriptor_set.hpp"
 #include "rlm/descriptor_set/descriptor_set_layout.hpp"
 #include "rlm/descriptor_set/descriptor_set_pool.hpp"
-#include "rlm/descriptor_set/descriptor_set_writer.hpp"
 
 namespace rlm {
 
@@ -68,7 +67,8 @@ std::unique_ptr<DescriptorSet> DescriptorSet::Builder::build() {
       rlmDevice,
       std::move(buffers),
       std::move(descriptorSetPool),
-      std::move(descriptorSetLayout));
+      std::move(descriptorSetLayout),
+      std::move(descriptorSets));
 }
 
 // Descriptor Set
@@ -76,24 +76,21 @@ DescriptorSet::DescriptorSet(
     Device &rlmDevice,
     std::vector<std::unique_ptr<Buffer>> buffers,
     std::unique_ptr<DescriptorSetPool> pool,
-    std::unique_ptr<DescriptorSetLayout> layout)
+    std::unique_ptr<DescriptorSetLayout> layout,
+    std::vector<VkDescriptorSet> descriptorSets)
     : rlmDevice(rlmDevice), buffers(std::move(buffers)),
       descriptorSetPool(std::move(pool)),
-      descriptorSetLayout(std::move(layout)) {
-  // VkDescriptorSetAllocateInfo allocInfo{};
-  // allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  // allocInfo.descriptorPool = descriptorSetPool->getDescriptorPool();
-  // allocInfo.descriptorSetCount =
-  //     descriptorSetLayout->getDescriptorSetLayout().size();
-  // allocInfo.pSetLayouts =
-  // descriptorSetLayout->getDescriptorSetLayout().data();
-  //
-  // descriptorSets.resize(descriptorSetLayout->getDescriptorSetLayout().size());
-  // auto result = vkAllocateDescriptorSets(
-  //     rlmDevice.getDevice(), &allocInfo, descriptorSets.data());
-  // if (result != VK_SUCCESS) {
-  //   throw std::runtime_error("failed to allocate descriptor sets!");
-  // }
+      descriptorSetLayout(std::move(layout)),
+      descriptorSets{std::move(descriptorSets)} {}
+
+DescriptorSet::~DescriptorSet() {
+  if (!descriptorSets.empty() && descriptorSetPool) {
+    vkFreeDescriptorSets(
+        rlmDevice.getDevice(),
+        descriptorSetPool->getDescriptorPool(),
+        static_cast<uint32_t>(descriptorSets.size()),
+        descriptorSets.data());
+  }
 }
 
 void DescriptorSet::bindDescriptorSets(

@@ -14,7 +14,7 @@ class SimpleRenderSystem {
   SimpleRenderSystem(
       Device &device,
       VkRenderPass renderPass,
-      DescriptorSetLayout globalLayout);
+      const DescriptorSetLayout &globalLayout);
   ~SimpleRenderSystem();
 
   SimpleRenderSystem(const SimpleRenderSystem &) = delete;

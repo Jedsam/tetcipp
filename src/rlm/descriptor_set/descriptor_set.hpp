@@ -65,7 +65,10 @@ class DescriptorSet {
       Device &rlmDevice,
       std::vector<std::unique_ptr<Buffer>> buffers,
       std::unique_ptr<DescriptorSetPool> pool,
-      std::unique_ptr<DescriptorSetLayout> layout);
+      std::unique_ptr<DescriptorSetLayout> layout,
+      std::vector<VkDescriptorSet> descriptorSets);
+
+  ~DescriptorSet();
 
  private:
   Device &rlmDevice;

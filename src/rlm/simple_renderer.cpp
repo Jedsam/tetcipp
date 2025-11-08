@@ -26,7 +26,7 @@ SimpleRenderSystem::~SimpleRenderSystem() {
 SimpleRenderSystem::SimpleRenderSystem(
     Device &device,
     VkRenderPass renderPass,
-    DescriptorSetLayout globalLayout)
+    const DescriptorSetLayout &globalLayout)
     : rlmDevice{device} {
   createPipelineLayout(globalLayout);
   createPipeline(renderPass);

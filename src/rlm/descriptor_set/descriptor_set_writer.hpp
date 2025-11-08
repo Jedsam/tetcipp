@@ -29,5 +29,6 @@ class DescriptorSetWriter {
   DescriptorSetPool &descriptorSetPool;
   DescriptorSetLayout &descriptorSetLayout;
   std::vector<std::vector<VkWriteDescriptorSet>> writes;
+  std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos;
 };
 }  // namespace rlm

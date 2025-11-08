@@ -61,22 +61,25 @@ DescriptorSetLayout::DescriptorSetLayout(
   layoutInfo.bindingCount = static_cast<uint32_t>(bindingsVector.size());
   layoutInfo.pBindings = bindingsVector.data();
 
-  VkDescriptorSetLayout descriptorSetLayout;
-  if (vkCreateDescriptorSetLayout(
-          rlmDevice.getDevice(), &layoutInfo, nullptr, &descriptorSetLayout) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create descriptor set layout!");
-  }
+  descriptorSetLayouts.resize(setLayoutCount);
 
-  // Copy the setlayouts
-  descriptorSetLayouts.clear();
-  descriptorSetLayouts.insert(
-      descriptorSetLayouts.begin(), setLayoutCount, descriptorSetLayout);
+  for (size_t i = 0; i < setLayoutCount; i++) {
+    if (vkCreateDescriptorSetLayout(
+            rlmDevice.getDevice(),
+            &layoutInfo,
+            nullptr,
+            &descriptorSetLayouts[i]) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create descriptor set layout!");
+    }
+  }
 }
 
 DescriptorSetLayout::~DescriptorSetLayout() {
   // It might be necessary to delete all of them instead of a single one
-  vkDestroyDescriptorSetLayout(
-      rlmDevice.getDevice(), descriptorSetLayouts.at(0), nullptr);
+  for (auto layout : descriptorSetLayouts) {
+    if (layout != VK_NULL_HANDLE) {
+      vkDestroyDescriptorSetLayout(rlmDevice.getDevice(), layout, nullptr);
+    }
+  }
 }
 }  // namespace rlm
