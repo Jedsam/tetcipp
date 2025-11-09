@@ -5,6 +5,7 @@
 
 #include "device.hpp"
 #include "renderer.hpp"
+#include "rlm/descriptor_set/descriptor_set.hpp"
 #include "rlm/simple_renderer.hpp"
 #include "window.hpp"
 
@@ -37,6 +38,8 @@ class Core {
   std::unique_ptr<Device> rlmDevice;
   std::unique_ptr<Renderer> rlmRenderer;
   std::unique_ptr<SimpleRenderSystem> simpleRenderSystem;
+  std::unique_ptr<DescriptorSet> uboSet;
+
   void init();
 
   void mainLoop();

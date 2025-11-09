@@ -76,12 +76,19 @@ DescriptorSetWriter &DescriptorSetWriter::writeBuffer(uint32_t binding) {
 // }
 
 bool DescriptorSetWriter::build() {
-  // VkDescriptorSet &set
-  std::vector<VkDescriptorSet> descriptorSets =
-      descriptorSet.getDescriptorSets();
-  for (int i = 0; i < descriptorSets.size(); i++) {
-    auto currentSet = descriptorSets[i];
-    overwrite(currentSet);
+  auto &sets = descriptorSet.getDescriptorSets();
+
+  assert(sets.size() == writes.size() && "Mismatched sets and writes count");
+
+  for (int i = 0; i < sets.size(); i++) {
+    if (!writes[i].empty()) {
+      vkUpdateDescriptorSets(
+          descriptorSetPool.getRLMDevice().getDevice(),
+          static_cast<uint32_t>(writes[i].size()),
+          writes[i].data(),
+          0,
+          nullptr);
+    }
   }
   return true;
 }

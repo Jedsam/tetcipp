@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(tetcipp CXX)
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_BUILD_TYPE Debug)
 
 # necessary for clangd to understand the file structure
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

@@ -56,14 +56,14 @@ void Core::init() {
           .build();
   spdlog::debug("Core: Ubo descriptor set pool done");
 
-  auto uboSet = DescriptorSet::Builder(*rlmDevice)
-                    .addDescriptorSetLayout(std::move(uboDescriptorSetLayout))
-                    .addDescriptorSetPool(std::move(uboDescriptorSetPool))
-                    .allocateDescriptorSets()
-                    .createBufferMemory(
-                        sizeof(engine::component::UniformBufferObject),
-                        Renderer::MAX_FRAMES_IN_FLIGHT)
-                    .build();
+  uboSet = DescriptorSet::Builder(*rlmDevice)
+               .addDescriptorSetLayout(std::move(uboDescriptorSetLayout))
+               .addDescriptorSetPool(std::move(uboDescriptorSetPool))
+               .allocateDescriptorSets()
+               .createBufferMemory(
+                   sizeof(engine::component::UniformBufferObject),
+                   Renderer::MAX_FRAMES_IN_FLIGHT)
+               .build();
   spdlog::debug("Core: Ubo descriptor set done");
 
   bool result = DescriptorSetWriter(*uboSet).writeBuffer(0).build();
