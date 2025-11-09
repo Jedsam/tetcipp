@@ -11,7 +11,7 @@ using ArchetypeId = uint32_t;
 class ComponentIDGenerator {
  public:
   template <typename Component> static uint32_t nextID() {
-    componentSizes[current_id] = sizeof(Component);
+    componentSizes.push_back(sizeof(Component));
     return current_id.fetch_add(1);
   }
 
@@ -28,7 +28,7 @@ class ComponentIDGenerator {
 
  private:
   inline static std::atomic<ComponentID> current_id = 1;
-  inline static std::vector<ComponentID> componentSizes{0, 0};
+  inline static std::vector<ComponentID> componentSizes{0};
 };
 
 }  // namespace ecs

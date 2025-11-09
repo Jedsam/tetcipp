@@ -29,10 +29,33 @@ struct Register {
 
     ~Column() { free(data); }
 
+    Column(const Column &) = delete;
+    Column &operator=(const Column &) = delete;
+
+    Column(Column &&other) noexcept {
+      data = other.data;
+      element_size = other.element_size;
+      count = other.count;
+      capacity = other.capacity;
+      other.data = nullptr;  // prevent double free
+    }
+
+    Column &operator=(Column &&other) noexcept {
+      if (this != &other) {
+        free(data);
+        data = other.data;
+        element_size = other.element_size;
+        count = other.count;
+        capacity = other.capacity;
+        other.data = nullptr;
+      }
+      return *this;
+    }
+
     size_t size() { return count; }
 
     void *at(size_t index) const {
-      if (index >= count) {
+      if (index > count) {
         return nullptr;
       }
       return static_cast<char *>(data) + index * element_size;
@@ -49,7 +72,7 @@ struct Register {
       if (count == 0) {
         return;
       }
-      std::memcpy(at(row), at(count), element_size);
+      std::memcpy(at(row), at(count - 1), element_size);
 
       if (count > 16 && count < capacity / 4) {
         data = reallocarray(data, capacity / 2, element_size);
@@ -166,6 +189,8 @@ struct Register {
   // Basically a sorted vector of component ids
   struct Type {
    public:
+    size_t size() const { return componentIDs.size(); }
+
     auto begin() { return componentIDs.begin(); }
 
     auto begin() const { return componentIDs.begin(); }
@@ -245,6 +270,8 @@ struct Register {
     std::vector<EntityID> entities;
     std::unordered_map<ComponentID, ArchetypeEdge> edges;
 
+    Archetype() { entities.push_back(Entity::createEntity(0, 0)); }
+
     size_t size() { return entities.size(); }
 
     template <typename Component> auto findComponents() {
@@ -272,10 +299,35 @@ struct Register {
     }
 
     // Adds a value to the archetype given the archetype the components resides
+    // in, entityid and the new component to add
+    template <typename Component>
+    void copyValueFromBaseArchetype(
+        const Archetype &oldArchetype,
+        Component component,
+        EntityID entityID) {
+
+      size_t component_index =
+          type.find(ComponentIDGenerator::getComponentID<Component>());
+      components[component_index].pushBackComponent<Component>(&component);
+      entities.push_back(entityID);
+    }
+
+    // Adds a value to the archetype given the archetype the components resides
     // in, row value of the entity components and the new component to add
     template <typename Component>
     void
     copyValue(const Archetype &oldArchetype, Component component, size_t row) {
+
+      if (oldArchetype.type.size() == 0) {
+        // If the old archetype is the empty base (or empty for any reason),
+        // we only add the new component, and skip the component copying loop.
+        size_t component_index =
+            type.find(ComponentIDGenerator::getComponentID<Component>());
+        components[component_index].pushBackComponent<Component>(&component);
+        entities.push_back(oldArchetype.entities[row]);
+        return;
+      }
+
       auto &newComponents = components;
       auto &newType = type;
       auto &oldComponents = oldArchetype.components;
@@ -356,7 +408,8 @@ struct Register {
     record.archetype = newArchetype;
     record.row = row;
 
-    newArchetype->copyValue<Component>(baseArchetype, component, record.row);
+    newArchetype->copyValueFromBaseArchetype<Component>(
+        baseArchetype, component, newEntity);
 
     // update the EntityIndex map
     entityIndex[newEntity] = record;
