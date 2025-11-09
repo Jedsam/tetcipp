@@ -333,7 +333,7 @@ struct Register {
       auto &oldComponents = oldArchetype.components;
       auto &oldType = oldArchetype.type;
       for (int i = 0, j = 0; i < newComponents.size(); i++) {
-        if (newType[i] == oldType[j]) {
+        if (j < oldComponents.size() && newType[i] == oldType[j]) {
           newComponents[i].pushBack(oldComponents[j], row);
 
           j++;
