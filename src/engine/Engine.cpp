@@ -1,4 +1,5 @@
 
+#include <spdlog/spdlog.h>
 #include <sys/types.h>
 
 #include <cassert>
@@ -21,8 +22,12 @@ void Engine::run() {
   auto lastTime = std::chrono::high_resolution_clock::now();
 
   component::UniformBufferObject myGlobalUbo{};
+
+  spdlog::debug("Engine: Starting the engine");
+
   int frameCount = 0;
   while (!rlmCore.shouldClose()) {
+    spdlog::debug("Engine: Loop start");
     auto newTime = std::chrono::high_resolution_clock::now();
     float frameTime =
         std::chrono::duration<float, std::chrono::seconds::period>(
@@ -35,6 +40,7 @@ void Engine::run() {
 
     frameCount++;
 
+    spdlog::debug("Engine: Calculating actions");
     myGlobalUbo.model = glm::rotate(
         glm::mat4(1.0f),
         frameTime * glm::radians(90.0f),
@@ -50,10 +56,13 @@ void Engine::run() {
       system->update(myRegister, elapsed);
     }
 
+    spdlog::debug("Engine: beginning frame operations");
     rlmCore.beginFrameOperations();
 
+    spdlog::debug("Engine: Updating rendering");
     renderingSystem->update(myRegister, elapsed);
 
+    spdlog::debug("Engine: Ending frame operations");
     rlmCore.endFrameOperations();
 
     if (elapsed >= 1.0f) {

@@ -20,7 +20,7 @@ class Core {
   Core();
   ~Core();
 
-  bool shouldClose() { return !rlmWindow->shouldClose(); }
+  bool shouldClose() { return rlmWindow->shouldClose(); }
 
   void beginFrameOperations();
   void endFrameOperations();
