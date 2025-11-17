@@ -7,6 +7,6 @@
 namespace engine::component {
 
 struct ModelComponent {
-  std::shared_ptr<rlm::Model> model;
+  std::unique_ptr<rlm::Model> model;
 };
 }  // namespace engine::component

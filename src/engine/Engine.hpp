@@ -20,7 +20,7 @@ class Engine {
 
   template <typename Component>
   ecs::EntityID createEntity(Component component) {
-    return myRegister.createEntity<Component>(component);
+    return myRegister.createEntity(component);
   }
 
   template <typename Component>

@@ -6,7 +6,6 @@
 #include "engine/component/ModelComponent.hpp"
 #include "engine/component/UniformBufferObjectComponent.hpp"
 #include "engine/system/RenderSystem.hpp"
-#include "engine/system/RotationSystem.hpp"
 #include "rlm/model.hpp"
 
 #include "Game.hpp"
@@ -30,7 +29,7 @@ void Game::setupRenderer() {
 }
 
 void Game::setupSystems() {
-  myEngine.addSystem(std::make_unique<engine::system::RotationSystem>());
+  // myEngine.addSystem(std::make_unique<engine::system::RotationSystem>());
 }
 
 void Game::setupScene() {
@@ -41,16 +40,21 @@ void Game::setupScene() {
       {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
   };
   const std::vector<uint32_t> indices = {0, 1, 2, 2, 3, 0};
-  rlm::Model::Builder modelBuilder{};
-  modelBuilder.vertices = vertices;
-  modelBuilder.indices = indices;
-  engine::component::ModelComponent myTriangleModel{};
-  myTriangleModel.model =
-      std::make_shared<rlm::Model>(myEngine.getDevice(), modelBuilder);
+  const rlm::Model::Builder &modelBuilder = {
+      .vertices = vertices, .indices = indices};
+
+  ecs::ComponentIDGenerator::registerComponent<
+      engine::component::ModelComponent>();
+
   ecs::EntityID myTriangle =
-      myEngine.createEntity<engine::component::ModelComponent>(myTriangleModel);
+      myEngine.createEntity<engine::component::ModelComponent>(
+          engine::component::ModelComponent(
+              std::make_unique<rlm::Model>(
+                  myEngine.getDevice(), modelBuilder)));
+
   engine::component::UniformBufferObject myTrianglePosition{};
   myEngine.addComponent<engine::component::UniformBufferObject>(
       myTrianglePosition, myTriangle);
 }
+
 }  // namespace app

@@ -23,11 +23,16 @@ struct Register {
  public:
   struct Column {
    public:
-    explicit Column(size_t element_size) : element_size(element_size) {
+    explicit Column(const ComponentIDGenerator::ComponentInfo *info)
+        : info(info), element_size(info->size) {
       data = malloc(capacity * element_size);
     }
 
-    ~Column() { free(data); }
+    ~Column() {
+      if (info)
+        info->dtor(data, count);
+      free(data);
+    }
 
     Column(const Column &) = delete;
     Column &operator=(const Column &) = delete;
@@ -37,16 +42,20 @@ struct Register {
       element_size = other.element_size;
       count = other.count;
       capacity = other.capacity;
+      info = other.info;
       other.data = nullptr;  // prevent double free
     }
 
     Column &operator=(Column &&other) noexcept {
       if (this != &other) {
+        if (info)
+          info->dtor(data, count);
         free(data);
         data = other.data;
         element_size = other.element_size;
         count = other.count;
         capacity = other.capacity;
+        info = other.info;
         other.data = nullptr;
       }
       return *this;
@@ -72,12 +81,13 @@ struct Register {
       if (count == 0) {
         return;
       }
-      std::memcpy(at(row), at(count - 1), element_size);
+      info->dtor(at(row), 1);
+      info->move(at(row), at(count - 1), 1);
 
-      if (count > 16 && count < capacity / 4) {
-        data = reallocarray(data, capacity / 2, element_size);
-        capacity /= 2;
-      }
+      // if (count > 16 && count < capacity / 4) {
+      //   data = reallocarray(data, capacity / 2, element_size);
+      //   capacity /= 2;
+      // }
     }
 
     void pushBack(const Column &inputColumn, size_t index) {
@@ -90,7 +100,8 @@ struct Register {
         data = new_data;
         capacity *= 2;
       }
-      std::memcpy(at(count), inputColumn.at(index), element_size);
+      info->ctor(at(count), 1);
+      info->move(at(count), inputColumn.at(index), 1);
       count++;
     }
 
@@ -99,7 +110,8 @@ struct Register {
         data = reallocarray(data, capacity * 2, element_size);
         capacity *= 2;
       }
-      std::memcpy(at(count), component, element_size);
+      info->ctor(at(count), 1);
+      info->move(at(count), component, 1);
       count++;
     }
 
@@ -108,14 +120,19 @@ struct Register {
       if (index >= capacity) {
         return;
       }
-      std::memcpy(at(index), component, element_size);
+      info->dtor(at(index), 1);
+      info->move(at(index), component, 1);
     }
 
     void deleteElement(size_t index) {
       if (count == 0 || index >= count)
         return;
-      // replace the element with the top value
-      std::memcpy(at(index), at(count - 1), element_size);
+
+      if (index != count - 1) {
+        info->move(at(index), at(count - 1), 1);
+      }
+
+      // resize
       if (count > 16 && count < capacity / 4) {
         data = reallocarray(data, capacity / 2, element_size);
         capacity /= 2;
@@ -184,6 +201,7 @@ struct Register {
 
     size_t count = 0;
     size_t capacity = 16;
+    const ComponentIDGenerator::ComponentInfo *info = nullptr;
   };  // namespace ecs
 
   // Basically a sorted vector of component ids
@@ -221,7 +239,7 @@ struct Register {
           componentIDs.end(),
           std::back_inserter(returnColumn),
           [](auto componentID) {
-            return Column(ComponentIDGenerator::getComponentSize(componentID));
+            return Column(&ComponentIDGenerator::typeInfoMap[componentID]);
           });
       return returnColumn;
     }
@@ -303,9 +321,8 @@ struct Register {
     template <typename Component>
     void copyValueFromBaseArchetype(
         const Archetype &oldArchetype,
-        Component component,
+        Component &component,
         EntityID entityID) {
-
       size_t component_index =
           type.find(ComponentIDGenerator::getComponentID<Component>());
       components[component_index].pushBackComponent<Component>(&component);
@@ -316,8 +333,7 @@ struct Register {
     // in, row value of the entity components and the new component to add
     template <typename Component>
     void
-    copyValue(const Archetype &oldArchetype, Component component, size_t row) {
-
+    copyValue(const Archetype &oldArchetype, Component &component, size_t row) {
       if (oldArchetype.type.size() == 0) {
         // If the old archetype is the empty base (or empty for any reason),
         // we only add the new component, and skip the component copying loop.
@@ -366,7 +382,7 @@ struct Register {
     size_t row;
   };
 
-  template <typename Component> EntityID createEntity(Component component) {
+  template <typename Component> EntityID createEntity(Component &component) {
     // Find the id of the entity
     EntityID newEntity;
     if (deletedEntities.empty()) {

@@ -52,6 +52,8 @@ void Engine::run() {
     myGlobalUbo.proj =
         glm::perspective(glm::radians(45.0f), 1200.0f / 800.0f, 0.1f, 10.0f);
     myGlobalUbo.proj[1][1] *= -1;
+
+    spdlog::debug("Engine: Updating system");
     for (auto &system : systems) {
       system->update(myRegister, elapsed);
     }
