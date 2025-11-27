@@ -1,11 +1,13 @@
 #pragma once
 
 #include <memory>
+#include <vulkan/vulkan_core.h>
 
 #include "descriptor_set/descriptor_set_layout.hpp"
 #include "device.hpp"
 #include "model.hpp"
 #include "pipeline.hpp"
+#include "rlm/descriptor_set/descriptor_set.hpp"
 
 namespace rlm {
 
@@ -19,7 +21,10 @@ class SimpleRenderSystem {
 
   SimpleRenderSystem(const SimpleRenderSystem &) = delete;
   SimpleRenderSystem &operator=(const SimpleRenderSystem &) = delete;
-  void renderGameObjects(VkCommandBuffer commandBuffer, Model &model);
+  void renderGameObjects(
+      VkCommandBuffer commandBuffer,
+      Model &model,
+      DescriptorSet &descriptorSet);
 
  private:
   void createPipeline(VkRenderPass renderPass);

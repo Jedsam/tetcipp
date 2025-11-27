@@ -6,6 +6,7 @@
 
 #include "ecs/entity.hpp"
 #include "ecs/register.hpp"
+#include "engine/component/UniformBufferObjectComponent.hpp"
 #include "engine/system/System.hpp"
 #include "rlm/core.hpp"
 

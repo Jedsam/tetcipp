@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "rlm/descriptor_set/descriptor_set.hpp"
 #include "swapchain.hpp"
 #include "window.hpp"
 
@@ -13,7 +14,7 @@ class Renderer {
  public:
   static const int MAX_FRAMES_IN_FLIGHT = 2;
 
-  Renderer(Window &rlmWindow, Device &rlmDevice);
+  Renderer(Window &rlmWindow, Device &rlmDevice, DescriptorSet &uboSet);
   ~Renderer();
 
   void beginFrame();
@@ -24,11 +25,16 @@ class Renderer {
 
   VkRenderPass getRenderPass() { return rlmSwapChain->getRenderPass(); }
 
+  DescriptorSet &getUboSet() { return uboSet; }
+
+  int getFrameIndex() const { return currentFrame; }
+
   VkCommandBuffer getCommandBuffer() { return commandBuffers[currentFrame]; }
 
  private:
   Device &rlmDevice;
   Window &rlmWindow;
+  DescriptorSet &uboSet;
   std::shared_ptr<SwapChain> rlmSwapChain;
 
   std::vector<VkCommandBuffer> commandBuffers;

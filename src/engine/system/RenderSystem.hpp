@@ -7,6 +7,7 @@
 #include "engine/system/System.hpp"
 #include "rlm/renderer.hpp"
 #include "rlm/simple_renderer.hpp"
+#include <spdlog/spdlog.h>
 
 namespace engine::system {
 class RenderSystem : public engine::system::System {
@@ -22,8 +23,12 @@ class RenderSystem : public engine::system::System {
     for (auto &compArch : components) {
       for (auto &comp : compArch->findComponents<component::ModelComponent>()) {
         // Render logic here
+
+        // spdlog::debug("RenderSystem: Rendering an object");
         simpleRenderSystem.renderGameObjects(
-            rlmRenderer.getCommandBuffer(), *comp.model);
+            rlmRenderer.getCommandBuffer(),
+            *comp.model,
+            rlmRenderer.getUboSet());
       }
     }
   }

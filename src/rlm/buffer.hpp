@@ -29,6 +29,8 @@ class Buffer {
 
   VkBuffer getBuffer() { return buffer; }
 
+  VkResult flush(VkDeviceSize size, VkDeviceSize offset);
+
  private:
   void unmapMemory();
 

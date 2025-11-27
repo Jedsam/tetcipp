@@ -33,11 +33,6 @@ void Core::init() {
     throw std::runtime_error("Device creation was unsuccessful");
   }
 
-  rlmRenderer = std::make_unique<Renderer>(*rlmWindow, *rlmDevice);
-  if (rlmDevice == nullptr) {
-    throw std::runtime_error("Renderer creation was unsuccessful");
-  }
-
   spdlog::debug("Core: RLM objects created successfully");
   auto uboDescriptorSetLayout =
       DescriptorSetLayout::Builder(*rlmDevice)
@@ -67,6 +62,11 @@ void Core::init() {
   spdlog::debug("Core: Ubo descriptor set done");
 
   bool result = DescriptorSetWriter(*uboSet).writeBuffer(0).build();
+
+  rlmRenderer = std::make_unique<Renderer>(*rlmWindow, *rlmDevice, *uboSet);
+  if (rlmDevice == nullptr) {
+    throw std::runtime_error("Renderer creation was unsuccessful");
+  }
 
   spdlog::debug("Core: UBO set fully done");
   simpleRenderSystem = std::make_unique<SimpleRenderSystem>(

@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "device.hpp"
+#include "engine/component/UniformBufferObjectComponent.hpp"
 #include "renderer.hpp"
 #include "rlm/descriptor_set/descriptor_set.hpp"
 #include "rlm/simple_renderer.hpp"
@@ -32,6 +33,12 @@ class Core {
   Renderer &getRenderer() { return *rlmRenderer; }
 
   SimpleRenderSystem &getSimpleRenderSystem() { return *simpleRenderSystem; }
+
+  void updateGlobalUbo(
+      const engine::component::UniformBufferObject &uniformBufferObject) {
+    int frameIndex = rlmRenderer->getFrameIndex();
+    uboSet->updateSet(&uniformBufferObject, frameIndex);
+  }
 
  private:
   std::unique_ptr<Window> rlmWindow;

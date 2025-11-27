@@ -12,8 +12,8 @@
 
 namespace rlm {
 
-Renderer::Renderer(Window &rlmWindow, Device &rlmDevice)
-    : rlmWindow(rlmWindow), rlmDevice(rlmDevice) {
+Renderer::Renderer(Window &rlmWindow, Device &rlmDevice, DescriptorSet &uboSet)
+    : rlmWindow(rlmWindow), rlmDevice(rlmDevice), uboSet(uboSet) {
   recreateSwapChain();
   createCommandBuffers();
   spdlog::debug("Renderer: Command buffer allocated\n");

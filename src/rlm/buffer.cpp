@@ -41,6 +41,15 @@ void Buffer::unmapMemory() {
   vkUnmapMemory(rlmDevice.getDevice(), bufferMemory);
 }
 
+VkResult Buffer::flush(VkDeviceSize size, VkDeviceSize offset) {
+  VkMappedMemoryRange mappedRange = {};
+  mappedRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  mappedRange.memory = bufferMemory;
+  mappedRange.offset = offset;
+  mappedRange.size = size;
+  return vkFlushMappedMemoryRanges(rlmDevice.getDevice(), 1, &mappedRange);
+}
+
 void Buffer::writeToBuffer(
     const void *data,
     VkDeviceSize size,

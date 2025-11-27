@@ -57,8 +57,12 @@ void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
 
 void SimpleRenderSystem::renderGameObjects(
     VkCommandBuffer commandBuffer,
-    Model &model) {
+    Model &model,
+    DescriptorSet &descriptorSet) {
   rlmPipeline->bindCommandBuffer(commandBuffer);
+
+  descriptorSet.bindDescriptorSets(
+      commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, pipelineLayout);
 
   model.bind(commandBuffer);
   model.draw(commandBuffer);

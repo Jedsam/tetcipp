@@ -45,6 +45,11 @@ class DescriptorSet {
     return descriptorSetLayout;
   }
 
+  void updateSet(const void *data, int index) {
+    buffers[index]->writeToBuffer(data);
+    buffers[index]->flush(0, 0);
+  }
+
   std::unique_ptr<DescriptorSetPool> &getDescriptorSetPool() {
     return descriptorSetPool;
   }
