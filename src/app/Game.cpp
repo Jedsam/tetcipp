@@ -52,9 +52,9 @@ void Game::setupScene() {
               std::make_unique<rlm::Model>(
                   myEngine.getDevice(), modelBuilder)));
 
-  engine::component::UniformBufferObject myTrianglePosition{};
-  myEngine.addComponent<engine::component::UniformBufferObject>(
-      myTrianglePosition, myTriangle);
+  // engine::component::UniformBufferObject myTrianglePosition{};
+  // myEngine.addComponent<engine::component::UniformBufferObject>(
+  //     myTrianglePosition, myTriangle);
 }
 
 }  // namespace app
